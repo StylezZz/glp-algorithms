@@ -213,6 +213,66 @@ public class Ruta {
 
     /**
      * Optimiza la secuencia de nodos para minimizar la distancia total
+     * considerando los bloqueos en el mapa
+     * @param mapa Mapa con la información de bloqueos
+     * @param momento Momento actual para verificar bloqueos
+     */
+    public void optimizarSecuenciaConBloqueos(Mapa mapa, LocalDateTime momento) {
+        if (secuenciaNodos.size() <= 1) {
+            return;
+        }
+
+        List<Ubicacion> nuevaSecuencia = new ArrayList<>();
+        List<Ubicacion> pendientes = new ArrayList<>(secuenciaNodos);
+
+        Ubicacion actual = origen;
+        while (!pendientes.isEmpty()) {
+            // Encontrar la mejor ruta al siguiente punto considerando bloqueos
+            Ubicacion mejorSiguiente = null;
+            List<Ubicacion> mejorRuta = null;
+
+            for (Ubicacion destino : pendientes) {
+                // Usar A* para encontrar la ruta óptima evitando bloqueos
+                List<Ubicacion> ruta = mapa.encontrarRuta(actual, destino, momento);
+
+                // Si no hay ruta posible por bloqueos, intentar con el siguiente destino
+                if (ruta.isEmpty()) continue;
+
+                // Calcular distancia real de la ruta (suma de tramos)
+                int distanciaRuta = calcularDistanciaRuta(ruta);
+
+                // Actualizar si es la mejor opción encontrada hasta ahora
+                if (mejorRuta == null || distanciaRuta < calcularDistanciaRuta(mejorRuta)) {
+                    mejorSiguiente = destino;
+                    mejorRuta = ruta;
+                }
+            }
+
+            // Si no se encontró ninguna ruta viable, salir
+            if (mejorSiguiente == null) break;
+
+            // Agregar el mejor destino a la secuencia
+            nuevaSecuencia.add(mejorSiguiente);
+            pendientes.remove(mejorSiguiente);
+            actual = mejorSiguiente;
+        }
+
+        // Actualizar la secuencia de nodos
+        this.secuenciaNodos = nuevaSecuencia;
+        calcularDistanciaTotal();
+    }
+
+    // Método auxiliar para calcular la distancia total de una ruta
+    private int calcularDistanciaRuta(List<Ubicacion> ruta) {
+        int distancia = 0;
+        for (int i = 0; i < ruta.size() - 1; i++) {
+            distancia += ruta.get(i).distanciaA(ruta.get(i + 1));
+        }
+        return distancia;
+    }
+
+    /**
+     * Optimiza la secuencia de nodos para minimizar la distancia total
      */
     public void optimizarSecuencia() {
         // Implementación simple de optimización (nearest neighbor)

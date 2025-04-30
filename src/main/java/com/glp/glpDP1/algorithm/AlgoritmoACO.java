@@ -26,6 +26,7 @@ public class AlgoritmoACO {
     private double rho;      // Tasa de evaporación de feromonas
     private double q0;       // Parámetro de exploración vs explotación
     private double inicialFeromona; // Valor inicial de feromonas
+    private int iteracionActual;
 
     // Datos del problema
     private List<Camion> camionesDisponibles;
@@ -45,7 +46,7 @@ public class AlgoritmoACO {
      * Constructor con parámetros predeterminados
      */
     public AlgoritmoACO() {
-        this(30, 100, 1.0, 2.0, 0.1, 0.9, 0.1);
+        this(30, 100, 1.0, 2.0, 0.2, 0.9, 0.1);
     }
 
     /**
@@ -83,6 +84,7 @@ public class AlgoritmoACO {
         this.pedidosPendientes = preprocesarPedidos(pedidos);
         this.mapa = mapa;
         this.momentoActual = momento;
+        this.iteracionActual = 0;
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -98,6 +100,7 @@ public class AlgoritmoACO {
 
         // Ciclo principal del algoritmo ACO
         for (int iteracion = 0; iteracion < numIteraciones; iteracion++) {
+            this.iteracionActual = iteracion;
             List<Solucion> soluciones = new ArrayList<>();
 
             // Cada hormiga construye una solución
@@ -128,6 +131,7 @@ public class AlgoritmoACO {
             for (Ruta ruta : mejorSolucion) {
                 Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
                 if (camion != null) {
+                    //ruta.optimizarSecuenciaConBloqueos(mapa,momentoActual);
                     ruta.optimizarConRecargas(mapa, camion);
                 }
             }
@@ -140,17 +144,31 @@ public class AlgoritmoACO {
      * Preprocesa los pedidos dividiéndolos si son muy grandes
      */
     private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales) {
+        List<Pedido> pedidosOrdenados = pedidosOriginales.stream()
+                .sorted(Comparator
+                        .comparing((Pedido p) -> p.getTiempoLimiteEntrega().toHours())
+                        .thenComparing(p -> -p.getCantidadGLP())) // Negativo para ordenar de mayor a menor
+                .collect(Collectors.toList());
         List<Pedido> pedidosProcesados = new ArrayList<>();
-        for (Pedido pedido : pedidosOriginales) {
-            if (pedido.getCantidadGLP() <= 25.0) {
+        for (Pedido pedido : pedidosOrdenados) {
+            if (pedido.getCantidadGLP() <= 12.0) {
                 pedidosProcesados.add(pedido);
                 continue;
             }
 
             double cantidadRestante = pedido.getCantidadGLP();
             int contador = 1;
+
+            double sizeMaximoParte;
+            if (cantidadRestante > 40.0) {
+                sizeMaximoParte = 13.0; // Pedidos muy grandes en partes de 13m³
+            } else if (cantidadRestante > 25.0) {
+                sizeMaximoParte = 15.0; // Pedidos grandes en partes de 15m³
+            } else {
+                sizeMaximoParte = 12.0; // Resto en partes de 12m³
+            }
             while (cantidadRestante > 0) {
-                double cantidadParte = Math.min(cantidadRestante, 25.0);
+                double cantidadParte = Math.min(cantidadRestante, sizeMaximoParte);
                 cantidadRestante -= cantidadParte;
 
                 Pedido pedidoParte = new Pedido(
@@ -197,6 +215,31 @@ public class AlgoritmoACO {
         return false;
     }
 
+    private double calcularPenalizacionBloqueos(Ubicacion origen, Ubicacion destino, LocalDateTime momento) {
+        // Factor de penalización base
+        double penalizacion = 1.0;
+
+        // Verificar cada posible bloqueo
+        for (Bloqueo bloqueo : mapa.getBloqueos()) {
+            // Si el tramo está bloqueado, aumentar penalización
+            if (bloqueo.tramoBloqueado(origen, destino, momento)) {
+                penalizacion *= 10.0; // Penalización fuerte
+                return penalizacion; // Retornar inmediatamente
+            }
+
+            // Si algún nodo está bloqueado, también penalizar
+            for (Ubicacion nodo : bloqueo.getNodosBloqueados()) {
+                // Si está cerca del origen o destino (menos de 3 unidades)
+                if (origen.distanciaA(nodo) <= 3 || destino.distanciaA(nodo) <= 3) {
+                    penalizacion *= 2.0;
+                }
+            }
+        }
+
+        return penalizacion;
+    }
+
+
     /**
      * Inicializa las matrices de feromonas y heurística
      */
@@ -236,17 +279,24 @@ public class AlgoritmoACO {
                 // Verificar combustible
                 boolean combustibleSuficiente = camion.calcularDistanciaMaxima() >= distancia;
 
+                // Calcular penalización por bloqueos
+                double penalizacionBloqueos = calcularPenalizacionBloqueos(
+                        camion.getUbicacionActual(), pedido.getUbicacion(), momentoActual);
+
                 // Si no cumple con requisitos básicos, la heurística es muy baja
                 if (!capacidadSuficiente || !combustibleSuficiente) {
-                    matrizHeuristica[i][j] = 0.01;
+                    matrizHeuristica[i][j] = 0.001;
                 } else {
+                    double valorBase = 1.0/(consumoEstimado+0.1);
+                    double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
+                    double factorUrgencia = horasLimite < 8 ? 2.0: 1.0;
                     // Inversamente proporcional al consumo (menor consumo = mejor)
-                    matrizHeuristica[i][j] = 1.0 / (consumoEstimado + 0.1);
+                    matrizHeuristica[i][j] = (valorBase*factorUrgencia)/penalizacionBloqueos;
                 }
             }
 
             // Opción de no asignar (última columna)
-            matrizHeuristica[i][numCamiones] = 0.01; // Desfavorecemos no asignar
+            matrizHeuristica[i][numCamiones] = 0.001; // Desfavorecemos no asignar
         }
     }
 
@@ -268,18 +318,23 @@ public class AlgoritmoACO {
         }
 
         // Aseguramos que cada camión reciba al menos un pedido si es posible
+        // usando nuestra versión mejorada
         asignarPedidosIniciales(asignaciones, pedidosNoAsignados);
 
         // Para cada pedido no asignado, decidir a qué camión asignarlo
-        while (!pedidosNoAsignados.isEmpty()) {
-            // Elegir un pedido aleatoriamente
-            int indexPedido = pedidosNoAsignados.remove(new Random().nextInt(pedidosNoAsignados.size()));
+        // Iterar múltiples veces para mejorar asignación
+        for (int intento = 0; intento < 3 && !pedidosNoAsignados.isEmpty(); intento++) {
+            List<Integer> pedidosRestantes = new ArrayList<>(pedidosNoAsignados);
+            for (Integer indexPedido : pedidosRestantes) {
+                // Decidir a qué camión asignarlo con nuestra estrategia mejorada
+                int camionElegido = elegirCamion(indexPedido, asignaciones);
 
-            // Decidir a qué camión asignarlo
-            int camionElegido = elegirCamion(indexPedido, asignaciones);
-
-            // Asignar pedido
-            asignaciones[indexPedido] = camionElegido;
+                // Si encontramos un camión válido (no -1), asignar pedido
+                if (camionElegido >= 0 && camionElegido < numCamiones) {
+                    asignaciones[indexPedido] = camionElegido;
+                    pedidosNoAsignados.remove(indexPedido);
+                }
+            }
         }
 
         // Construir rutas a partir de asignaciones
@@ -297,36 +352,85 @@ public class AlgoritmoACO {
     private void asignarPedidosIniciales(int[] asignaciones, List<Integer> pedidosNoAsignados) {
         if (pedidosNoAsignados.isEmpty()) return;
 
-        // Shufflear camiones para asignación aleatoria
-        List<Integer> indicesCamiones = new ArrayList<>();
-        for (int i = 0; i < camionesDisponibles.size(); i++) {
-            indicesCamiones.add(i);
+        // 1. Identificar pedidos críticos (tiempo límite corto)
+        List<Integer> pedidosCriticos = new ArrayList<>();
+        for (Integer indice : pedidosNoAsignados) {
+            Pedido pedido = pedidosPendientes.get(indice);
+            // Considerar críticos los pedidos con menos de 6 horas de margen
+            if (pedido.getTiempoLimiteEntrega().toHours() <= 6) {
+                pedidosCriticos.add(indice);
+            }
         }
-        Collections.shuffle(indicesCamiones);
 
-        // Para cada camión, intentar asignar el pedido más adecuado
-        for (int indiceCamion : indicesCamiones) {
-            // Si ya no hay pedidos, terminar
+        // 2. Asignar primero los pedidos críticos
+        for (Integer indicePedido : pedidosCriticos) {
+            // Encontrar el mejor camión para este pedido crítico
+            int mejorCamion = -1;
+            double mejorValor = -1;
+
+            for (int i = 0; i < camionesDisponibles.size(); i++) {
+                Camion camion = camionesDisponibles.get(i);
+                Pedido pedido = pedidosPendientes.get(indicePedido);
+
+                // Verificar capacidad
+                if (camion.getCapacidadTanqueGLP() < pedido.getCantidadGLP()) continue;
+
+                // Calcular valor combinado (favoreciendo camiones con más capacidad disponible)
+                double capacidadRestante = camion.getCapacidadTanqueGLP() - pedido.getCantidadGLP();
+                double distancia = camion.getUbicacionActual().distanciaA(pedido.getUbicacion());
+                double valor = capacidadRestante - (distancia * 0.1);
+
+                if (valor > mejorValor) {
+                    mejorValor = valor;
+                    mejorCamion = i;
+                }
+            }
+
+            // Si encontramos un camión adecuado, asignar y remover de pendientes
+            if (mejorCamion != -1) {
+                asignaciones[indicePedido] = mejorCamion;
+                pedidosNoAsignados.remove(Integer.valueOf(indicePedido));
+            }
+        }
+
+        // 3. Asignar al menos un pedido a cada camión (para el resto de pedidos no críticos)
+        List<Integer> camionesVacios = new ArrayList<>();
+        for (int i = 0; i < camionesDisponibles.size(); i++) {
+            // Verificar si el camión ya tiene algún pedido asignado
+            boolean tieneAsignacion = false;
+            for (int j = 0; j < asignaciones.length; j++) {
+                if (asignaciones[j] == i) {
+                    tieneAsignacion = true;
+                    break;
+                }
+            }
+
+            if (!tieneAsignacion) {
+                camionesVacios.add(i);
+            }
+        }
+
+        // Intentar asignar un pedido a cada camión vacío
+        for (Integer indiceCamion : camionesVacios) {
             if (pedidosNoAsignados.isEmpty()) break;
 
             Camion camion = camionesDisponibles.get(indiceCamion);
-            int mejorPedido = -1;
+            Integer mejorPedido = null;
             double mejorValor = -1;
 
-            // Buscar el pedido más adecuado para este camión
-            for (int indicePedido : pedidosNoAsignados) {
+            // Buscar el pedido más compatible para este camión
+            for (Integer indicePedido : pedidosNoAsignados) {
                 Pedido pedido = pedidosPendientes.get(indicePedido);
 
                 // Verificar si el camión puede manejar este pedido
                 if (camion.getCapacidadTanqueGLP() < pedido.getCantidadGLP()) continue;
 
-                // Verificar distancia y combustible
+                // Calcular valor basado en distancia y tiempo límite
                 int distancia = camion.getUbicacionActual().distanciaA(pedido.getUbicacion());
-                if (camion.calcularDistanciaMaxima() < distancia) continue;
+                double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
 
-                // Calcular valor de asignación (combinación de feromona y heurística)
-                double valor = matrizFeromonas[indicePedido][indiceCamion] *
-                        Math.pow(matrizHeuristica[indicePedido][indiceCamion], beta);
+                // Priorizar pedidos cercanos con amplio margen de tiempo
+                double valor = (100 - distancia) + (horasLimite * 2);
 
                 if (valor > mejorValor) {
                     mejorValor = valor;
@@ -334,10 +438,10 @@ public class AlgoritmoACO {
                 }
             }
 
-            // Si encontramos un pedido adecuado, asignarlo
-            if (mejorPedido != -1) {
+            // Si encontramos un pedido adecuado, asignar
+            if (mejorPedido != null) {
                 asignaciones[mejorPedido] = indiceCamion;
-                pedidosNoAsignados.remove(Integer.valueOf(mejorPedido));
+                pedidosNoAsignados.remove(mejorPedido);
             }
         }
     }
@@ -478,7 +582,7 @@ public class AlgoritmoACO {
 
         // Optimizar el orden de cada ruta
         for (Ruta ruta : rutasPorCamion.values()) {
-            ruta.optimizarSecuencia();
+            ruta.optimizarSecuenciaConBloqueos(mapa,momentoActual);
         }
 
         return new ArrayList<>(rutasPorCamion.values());
@@ -516,7 +620,11 @@ public class AlgoritmoACO {
             double glpTotal = 0;
             for (Pedido p : ruta.getPedidosAsignados()) {
                 glpTotal += p.getCantidadGLP();
-                pedidosAsignadosIds.add(p.getId());
+                // Extraer ID base si es un pedido dividido
+                String idBase = p.getId().contains("_parte")
+                        ? p.getId().substring(0, p.getId().indexOf("_parte"))
+                        : p.getId();
+                pedidosAsignadosIds.add(idBase);
             }
 
             if (glpTotal > camion.getCapacidadTanqueGLP()) {
@@ -538,24 +646,30 @@ public class AlgoritmoACO {
                     retrasosTotal += retraso.toMinutes();
                 }
             }
-
-            // Penalización por averías (probabilidad proporcional a distancia)
-            // Esto es una heurística simple: más distancia = más probabilidad de avería
-            if (ruta.getDistanciaTotal() > 50) { // Si la ruta es larga
-                penalizacionAverias += ruta.getDistanciaTotal() * 0.01; // 1% por km
-            }
         }
 
         // Actualizar pedidos no asignados
-        pedidosNoAsignados -= pedidosAsignadosIds.size();
+        pedidosNoAsignados =0;
+        Set<String> idsBasePendientes = new HashSet<>();
 
-        // Calcular fitness final (ponderado, con mayor énfasis en consumo)
-        double fitness = 0.25 * consumoTotal +
-                0.10 * distanciaTotal +
-                0.15 * retrasosTotal +
-                0.1 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
-                0.10 * (sobrecargaTotal * 1000) +     // Penalización fuerte por sobrecarga
-                0.05 * penalizacionAverias;           // Penalización por probabilidad de averías
+        for(Pedido pedido:pedidosPendientes){
+            String idBase = pedido.getId().contains("_parte")
+                    ? pedido.getId().substring(0, pedido.getId().indexOf("_parte"))
+                    : pedido.getId();
+
+            if (!pedidosAsignadosIds.contains(idBase)) {
+                idsBasePendientes.add(idBase);
+            }
+        }
+
+        pedidosNoAsignados = idsBasePendientes.size();
+
+        // Calcular fitness final (ponderado) con mayor penalización por pedidos no asignados
+        double fitness = 0.03 * distanciaTotal +
+                0.05 * retrasosTotal +
+                0.80 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
+                0.03 * (sobrecargaTotal * 1000) +     // Reducir penalización por sobrecarga
+                0.02 * penalizacionAverias;           // Reducir penalización por averías
 
         return fitness;
     }
@@ -623,10 +737,16 @@ public class AlgoritmoACO {
      * Verifica si el algoritmo ha convergido
      */
     private boolean haConvergido() {
+        // Cambiar condición para que sea más difícil converger
+
+        // Si estamos en iteraciones tempranas, no permitir convergencia
+        if (iteracionActual < 40) {
+            return false; // Forzar al menos 40 iteraciones
+        }
+
         // Comprobar si la matriz de feromonas ha convergido
-        // (cuando la mayoría de las filas tienen un valor dominante)
         int filasConvergidas = 0;
-        double umbralConvergencia = 0.9; // El valor dominante debe ser al menos umbral veces mayor que los demás
+        double umbralConvergencia = 0.95; // Aumentado de 0.9 a 0.95
 
         for (int i = 0; i < matrizFeromonas.length; i++) {
             double max = 0;
@@ -641,13 +761,13 @@ public class AlgoritmoACO {
                 }
             }
 
-            if (max > segundoMax * umbralConvergencia) {
+            if (segundoMax == 0 || max > segundoMax * umbralConvergencia) {
                 filasConvergidas++;
             }
         }
 
-        // Si la mayoría de filas han convergido, considerar el algoritmo convergido
-        return filasConvergidas >= matrizFeromonas.length * 0.7;
+        // Necesitamos una proporción mayor para considerar convergencia
+        return filasConvergidas >= matrizFeromonas.length * 0.85; // Aumentado de 0.7 a 0.85
     }
 
     /**

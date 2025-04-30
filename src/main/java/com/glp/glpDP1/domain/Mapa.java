@@ -207,13 +207,8 @@ public class Mapa {
             // Marcar como visitado
             visitados.add(actual);
 
-            // Explorar los cuatro vecinos posibles (arriba, abajo, izquierda, derecha)
-            Ubicacion[] vecinos = new Ubicacion[] {
-                    new Ubicacion(actual.getX() + 1, actual.getY()),  // Derecha
-                    new Ubicacion(actual.getX() - 1, actual.getY()),  // Izquierda
-                    new Ubicacion(actual.getX(), actual.getY() + 1),  // Arriba
-                    new Ubicacion(actual.getX(), actual.getY() - 1)   // Abajo
-            };
+            // Explorar los vecinos en las 8 direcciones para mayor flexibilidad
+            List<Ubicacion> vecinos = obtenerVecinos(actual);
 
             for (Ubicacion vecino : vecinos) {
                 // Verificar si el vecino es válido (dentro del mapa y no bloqueado)
@@ -246,6 +241,19 @@ public class Mapa {
 
         // Si llegamos aquí, no hay ruta posible
         return new ArrayList<>();
+    }
+
+    // Método auxiliar para obtener todos los vecinos posibles
+    private List<Ubicacion> obtenerVecinos(Ubicacion ubicacion) {
+        List<Ubicacion> vecinos = new ArrayList<>();
+
+        // Movimientos en las cuatro direcciones principales
+        vecinos.add(new Ubicacion(ubicacion.getX() + 1, ubicacion.getY()));  // Derecha
+        vecinos.add(new Ubicacion(ubicacion.getX() - 1, ubicacion.getY()));  // Izquierda
+        vecinos.add(new Ubicacion(ubicacion.getX(), ubicacion.getY() + 1));  // Arriba
+        vecinos.add(new Ubicacion(ubicacion.getX(), ubicacion.getY() - 1));  // Abajo
+
+        return vecinos;
     }
 
     /**
