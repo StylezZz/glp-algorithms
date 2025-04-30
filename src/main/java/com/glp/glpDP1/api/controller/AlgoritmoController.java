@@ -3,7 +3,15 @@ package com.glp.glpDP1.api.controller;
 import com.glp.glpDP1.api.dto.request.AlgoritmoSimpleRequest;
 import com.glp.glpDP1.api.dto.response.AlgoritmoResultResponse;
 import com.glp.glpDP1.api.dto.response.AlgoritmoStatusResponse;
+import com.glp.glpDP1.domain.Camion;
+import com.glp.glpDP1.domain.Mapa;
+import com.glp.glpDP1.domain.Pedido;
+import com.glp.glpDP1.domain.Ruta;
+import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
+import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.AlgoritmoService;
+import com.glp.glpDP1.services.impl.AnalisisPedidosService;
+import com.glp.glpDP1.services.impl.OptimizacionMultipleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.NoSuchElementException;
+
+import java.time.LocalDateTime;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/algorithm")
@@ -22,6 +32,91 @@ public class AlgoritmoController {
 
     @Autowired
     private final AlgoritmoService algoritmoService;
+
+    @Autowired
+    private OptimizacionMultipleService optimizacionMultipleService;
+    @Autowired
+    private DataRepositoryImpl dataRepositoryImpl;
+
+    @PostMapping("/start-multiple")
+    public ResponseEntity<Map<String, Object>> iniciarMultiple(
+            @RequestBody AlgoritmoSimpleRequest request,
+            @RequestParam(defaultValue = "10") int numEjecuciones) {
+
+        try {
+            // Obtener datos del repositorio
+            List<Camion> camiones = dataRepositoryImpl.obtenerCamiones();
+            List<Pedido> pedidos = dataRepositoryImpl.obtenerPedidos();
+            Mapa mapa = dataRepositoryImpl.obtenerMapa();
+
+            // Si no se especificó momento actual, usar el actual
+            LocalDateTime momentoActual = request.getMomentoActual() != null ?
+                    request.getMomentoActual() : LocalDateTime.now();
+
+            // Convertir escenario
+            EscenarioSimulacion escenario = null;
+            if (request.getEscenario() != null) {
+                try {
+                    escenario = EscenarioSimulacion.valueOf(request.getEscenario());
+                } catch (IllegalArgumentException e) {
+                    escenario = EscenarioSimulacion.DIA_A_DIA;
+                }
+            } else {
+                escenario = EscenarioSimulacion.DIA_A_DIA;
+            }
+
+            // Ejecutar algoritmo múltiples veces
+            OptimizacionMultipleService.ResultadoOptimizacion resultado;
+
+            if ("GENETICO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
+                resultado = optimizacionMultipleService.ejecutarMultipleGenetico(
+                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones
+                );
+            } else {
+                resultado = optimizacionMultipleService.ejecutarMultiplePSO(
+                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones
+                );
+            }
+
+            // Iniciar algoritmo con la mejor solución
+            String id = UUID.randomUUID().toString();
+
+            // Crear objeto de estado y resultado
+            AlgoritmoStatusResponse estado = new AlgoritmoStatusResponse(
+                    id,
+                    AlgoritmoStatusResponse.EstadoAlgoritmo.COMPLETADO,
+                    100.0,
+                    LocalDateTime.now(),
+                    LocalDateTime.now(),
+                    resultado.fitness
+            );
+
+            // Calcular métricas
+            double distanciaTotal = resultado.rutas.stream()
+                    .mapToDouble(Ruta::getDistanciaTotal).sum();
+
+            double consumoCombustible = resultado.rutas.stream()
+                    .mapToDouble(Ruta::getConsumoCombustible).sum();
+
+            // Crear resultado y almacenar
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("id", id);
+            respuesta.put("rutas", resultado.rutas);
+            respuesta.put("fitness", resultado.fitness);
+            respuesta.put("numEjecuciones", numEjecuciones);
+            respuesta.put("pedidosAsignados", resultado.pedidosAsignados);
+            respuesta.put("pedidosTotales", pedidos.size());
+            respuesta.put("distanciaTotal", distanciaTotal);
+            respuesta.put("consumoCombustible", consumoCombustible);
+            respuesta.put("tiempoEjecucionMs", resultado.tiempoEjecucionMs);
+
+            return ResponseEntity.ok(respuesta);
+        } catch (Exception e) {
+            log.error("Error al ejecutar optimización múltiple: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al ejecutar optimización", e);
+        }
+    }
 
     /**
      * Inicia una nueva ejecución del algoritmo de optimización
@@ -128,6 +223,43 @@ public class AlgoritmoController {
         } catch (Exception e) {
             log.error("Error al iniciar algoritmo optimizado: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
+        }
+    }
+
+    @Autowired
+    private AnalisisPedidosService analisisPedidosService;
+
+    @GetMapping("/analisis/{id}")
+    public ResponseEntity<Map<String, Object>> analizarResultado(@PathVariable String id) {
+        try {
+            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
+            List<Pedido> todosPedidos = dataRepositoryImpl.obtenerPedidos();
+
+            Map<String, Object> analisis = analisisPedidosService.analizarPedidosNoAsignados(
+                    todosPedidos, resultado.getRutas());
+
+            return ResponseEntity.ok(analisis);
+        } catch (Exception e) {
+            log.error("Error al analizar resultado: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al analizar resultado", e);
+        }
+    }
+
+    @GetMapping("/analisis/{id}/informe")
+    public ResponseEntity<String> obtenerInformeAnalisis(@PathVariable String id) {
+        try {
+            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
+            List<Pedido> todosPedidos = dataRepositoryImpl.obtenerPedidos();
+
+            String informe = analisisPedidosService.generarInformeNoAsignados(
+                    todosPedidos, resultado.getRutas());
+
+            return ResponseEntity.ok(informe);
+        } catch (Exception e) {
+            log.error("Error al generar informe: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al generar informe", e);
         }
     }
 }

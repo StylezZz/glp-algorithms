@@ -146,6 +146,15 @@ public class AlgoritmoGenetico {
             }
         }
 
+        for(Ruta ruta: mejorSolucion){
+            Camion camion = camionesDisponibles.stream()
+                    .filter(c -> c.getCodigo().equals(ruta.getCodigoCamion()))
+                    .findFirst().orElse(null);
+            if(camion!=null){
+                ruta.optimizarConRecargas(mapa,camion);
+            }
+        }
+
         // Retornar la mejor solución encontrada
         return mejorSolucion;
     }
@@ -304,11 +313,11 @@ public class AlgoritmoGenetico {
         }
 
         // Calcular fitness final (ponderado)
-        double fitness = 0.3 * consumoTotal +
-                0.1 * distanciaTotal +
-                0.2 * retrasosTotal +
-                0.3 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
-                0.1 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
+        double fitness = 0.15 * consumoTotal +
+                0.10 * distanciaTotal +
+                0.20 * retrasosTotal +
+                0.50 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+                0.05 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
 
         individuo.setFitness(fitness);
     }
