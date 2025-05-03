@@ -1,5 +1,6 @@
 package com.glp.glpDP1.domain;
 
+import com.glp.glpDP1.services.impl.MonitoreoService;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,6 +27,8 @@ public class Ruta {
     private boolean cancelada;
     private List<EventoRuta> eventos;
     private boolean requiereReabastecimiento;
+
+    private MonitoreoService monitoreoService;
 
     public Ruta(String codigoCamion, Ubicacion origen) {
         this.id = UUID.randomUUID().toString();
@@ -260,6 +263,34 @@ public class Ruta {
         // Actualizar la secuencia de nodos
         this.secuenciaNodos = nuevaSecuencia;
         calcularDistanciaTotal();
+
+        if(monitoreoService!=null){
+            actualizarEstadoMonitoreo(origen, momento);
+        }
+    }
+
+    public void actualizarEstadoMonitoreo(Ubicacion posicionActual, LocalDateTime momento) {
+        if (monitoreoService == null) return;
+
+        MonitoreoService.EstadoRuta estado = new MonitoreoService.EstadoRuta();
+        estado.setIdRuta(id);
+        estado.setCodigoCamion(codigoCamion);
+        estado.setNodosRecorridos(new ArrayList<>(secuenciaNodos));
+        estado.setPosicionActual(posicionActual);
+        estado.setPedidosEntregados(calcularPedidosEntregados());
+        estado.setPedidosTotales(pedidosAsignados.size());
+        estado.setConsumoCombustible(consumoCombustible);
+        estado.setDistanciaRecorrida(distanciaTotal);
+        estado.setUltimaActualizacion(momento);
+        estado.setCompletada(completada);
+
+        monitoreoService.actualizarEstadoRuta(id, estado);
+    }
+
+    private int calcularPedidosEntregados() {
+        return (int) pedidosAsignados.stream()
+                .filter(Pedido::isEntregado)
+                .count();
     }
 
     /**

@@ -10,6 +10,7 @@ import com.glp.glpDP1.domain.Ruta;
 import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.AlgoritmoService;
+import com.glp.glpDP1.services.impl.AlgoritmoServiceImpl;
 import com.glp.glpDP1.services.impl.AnalisisPedidosService;
 import com.glp.glpDP1.services.impl.OptimizacionMultipleService;
 import lombok.RequiredArgsConstructor;
@@ -260,6 +261,79 @@ public class AlgoritmoController {
             log.error("Error al generar informe: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al generar informe", e);
+        }
+    }
+
+    @PostMapping("/start-diario")
+    public ResponseEntity<String> iniciarAlgoritmoDiario(@RequestBody AlgoritmoSimpleRequest request) {
+        try {
+            log.info("Iniciando algoritmo diario tipo {}", request.getTipoAlgoritmo());
+            String id = ((AlgoritmoServiceImpl)algoritmoService).iniciarAlgoritmoDiario(request);
+            return ResponseEntity.ok(id);
+        } catch (IllegalStateException e) {
+            log.warn("No hay pedidos para hoy: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NO_CONTENT, e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error al iniciar algoritmo diario: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
+        }
+    }
+
+    @PostMapping("/genetico/start-diario")
+    public ResponseEntity<String> iniciarAlgoritmoGeneticoDiario(@RequestBody AlgoritmoSimpleRequest request) {
+        try {
+            log.info("Iniciando algoritmo genético diario");
+            String id = ((AlgoritmoServiceImpl)algoritmoService).iniciarAlgoritmoGeneticoDiario(request);
+            return ResponseEntity.ok(id);
+        } catch (IllegalStateException e) {
+            log.warn("No hay pedidos para hoy: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NO_CONTENT, e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error al iniciar algoritmo genético diario: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
+        }
+    }
+
+    @GetMapping("/simulacion/{id}")
+    public ResponseEntity<Map<String, Object>> obtenerResultadosSimulacion(@PathVariable String id) {
+        try {
+            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
+
+            // Extraer información específica de simulación
+            Map<String, Object> datosSimulacion = new HashMap<>();
+            datosSimulacion.put("rutas", resultado.getRutas());
+
+            // Estadísticas de entregas
+            int entregasTotales = 0;
+            int entregasATiempo = 0;
+            int entregasRetrasadas = 0;
+
+            for (Ruta ruta : resultado.getRutas()) {
+                for (Pedido pedido : ruta.getPedidosAsignados()) {
+                    if (pedido.isEntregado()) {
+                        entregasTotales++;
+
+                        // Verificar si la entrega fue a tiempo
+                        if (pedido.getHoraEntregaReal().isBefore(pedido.getHoraLimiteEntrega()) ||
+                                pedido.getHoraEntregaReal().isEqual(pedido.getHoraLimiteEntrega())) {
+                            entregasATiempo++;
+                        } else {
+                            entregasRetrasadas++;
+                        }
+                    }
+                }
+            }
+
+            datosSimulacion.put("entregasTotales", entregasTotales);
+            datosSimulacion.put("entregasATiempo", entregasATiempo);
+            datosSimulacion.put("entregasRetrasadas", entregasRetrasadas);
+            datosSimulacion.put("porcentajeCumplimiento",
+                    entregasTotales > 0 ? (double)entregasATiempo / entregasTotales * 100 : 0);
+
+            return ResponseEntity.ok(datosSimulacion);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener resultados de simulación", e);
         }
     }
 }

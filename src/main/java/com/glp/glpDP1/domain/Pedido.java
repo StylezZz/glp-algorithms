@@ -1,6 +1,7 @@
 package com.glp.glpDP1.domain;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -9,7 +10,7 @@ import java.util.UUID;
 /**
  * Representa un pedido de GLP por parte de un cliente
  */
-@Getter
+@Getter @Setter
 public class Pedido {
     private final String id;
     private final String idCliente;
