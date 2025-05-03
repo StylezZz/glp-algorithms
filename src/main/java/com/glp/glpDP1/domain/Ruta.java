@@ -4,9 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Representa una ruta para un camión, con una secuencia de nodos y pedidos asignados
@@ -27,6 +25,7 @@ public class Ruta {
     private boolean completada;
     private boolean cancelada;
     private List<EventoRuta> eventos;
+    private boolean requiereReabastecimiento;
 
     public Ruta(String codigoCamion, Ubicacion origen) {
         this.id = UUID.randomUUID().toString();
@@ -39,6 +38,7 @@ public class Ruta {
         this.completada = false;
         this.cancelada = false;
         this.eventos = new ArrayList<>();
+        this.requiereReabastecimiento = false;  // NUEVO: Inicializar a false
     }
 
     public List<Ubicacion> getSecuenciaNodos() {
@@ -262,6 +262,90 @@ public class Ruta {
         calcularDistanciaTotal();
     }
 
+    /**
+     * Optimiza la secuencia de nodos incluyendo paradas en el almacén central
+     * para rutas que requieren más GLP del que un camión puede llevar en un viaje
+     * @param camion Camión asignado a la ruta
+     * @param mapa Mapa con información de la ciudad y almacenes
+     */
+    public void optimizarSecuenciaConReabastecimientoEnCentral(Camion camion, Mapa mapa) {
+        if (secuenciaNodos.isEmpty() || secuenciaNodos.size() <= 1) {
+            return;
+        }
+
+        // Obtener almacén central
+        Almacen almacenCentral = mapa.obtenerAlmacenCentral();
+        Ubicacion ubicacionAlmacenCentral = almacenCentral.getUbicacion();
+
+        // Primero hacemos una optimización básica para ordenar los nodos
+        optimizarSecuencia();
+
+        // Lista para la nueva secuencia optimizada
+        List<Ubicacion> nuevaSecuencia = new ArrayList<>();
+
+        // Calcular el GLP total necesario para esta ruta
+        double glpTotal = pedidosAsignados.stream()
+                .mapToDouble(Pedido::getCantidadGLP)
+                .sum();
+
+        // Si no necesitamos más de lo que el camión puede llevar, no es necesario modificar
+        if (glpTotal <= camion.getCapacidadTanqueGLP()) {
+            return;
+        }
+
+        // Crear un mapa para asociar cada ubicación con su pedido y cantidad de GLP
+        Map<Ubicacion, List<Double>> glpPorUbicacion = new HashMap<>();
+
+        for (Pedido pedido : pedidosAsignados) {
+            Ubicacion ubicacion = pedido.getUbicacion();
+            if (!glpPorUbicacion.containsKey(ubicacion)) {
+                glpPorUbicacion.put(ubicacion, new ArrayList<>());
+            }
+            glpPorUbicacion.get(ubicacion).add(pedido.getCantidadGLP());
+        }
+
+        // Variable para rastrear la capacidad restante
+        double capacidadRestante = camion.getCapacidadTanqueGLP();
+        Ubicacion ubicacionActual = origen;
+
+        // Procesar cada ubicación en la secuencia optimizada
+        for (Ubicacion ubicacion : secuenciaNodos) {
+            // Calcular GLP total necesario para esta ubicación
+            double glpNecesario = glpPorUbicacion.get(ubicacion).stream()
+                    .mapToDouble(Double::doubleValue)
+                    .sum();
+
+            // Si no hay suficiente capacidad, necesitamos volver al almacén central
+            if (glpNecesario > capacidadRestante) {
+                // Añadir el almacén central a la ruta
+                nuevaSecuencia.add(ubicacionAlmacenCentral);
+
+                // Registrar el evento de recarga de GLP
+                registrarEvento(
+                        EventoRuta.TipoEvento.RECARGA_GLP,
+                        LocalDateTime.now(),
+                        ubicacionAlmacenCentral,
+                        "Recarga de GLP en almacén central"
+                );
+
+                // Restaurar capacidad completa
+                capacidadRestante = camion.getCapacidadTanqueGLP();
+                ubicacionActual = ubicacionAlmacenCentral;
+            }
+
+            // Añadir la ubicación actual a la secuencia
+            nuevaSecuencia.add(ubicacion);
+
+            // Reducir la capacidad disponible
+            capacidadRestante -= glpNecesario;
+            ubicacionActual = ubicacion;
+        }
+
+        // Actualizar la secuencia de nodos
+        this.secuenciaNodos = nuevaSecuencia;
+        calcularDistanciaTotal();
+    }
+
     // Método auxiliar para calcular la distancia total de una ruta
     private int calcularDistanciaRuta(List<Ubicacion> ruta) {
         int distancia = 0;
@@ -312,11 +396,29 @@ public class Ruta {
         List<Ubicacion> nuevaSecuencia = new ArrayList<>();
         List<Almacen> almacenes = mapa.getAlmacenes();
 
-        // Obtener almacén más cercano (para recarga)
+        // MODIFICADO: Obtener almacén central (para priorizar)
         Almacen almacenCentral = mapa.obtenerAlmacenCentral();
 
         Ubicacion actual = origen;
         double combustibleActual = camion.getNivelCombustibleActual();
+
+        double glpTotal = pedidosAsignados.stream().mapToDouble(Pedido::getCantidadGLP).sum();
+
+        boolean necesitaRecargaGLP = glpTotal > camion.getCapacidadTanqueGLP();
+
+        if(necesitaRecargaGLP && !secuenciaNodos.contains(almacenCentral.getUbicacion())){
+            int puntoMedio = secuenciaNodos.size() / 2;
+            if(puntoMedio > 0 && puntoMedio<secuenciaNodos.size()){
+                secuenciaNodos.add(puntoMedio,almacenCentral.getUbicacion());
+                // Registrar el evento de recarga de GLP
+                registrarEvento(
+                        EventoRuta.TipoEvento.RECARGA_GLP,
+                        LocalDateTime.now(),
+                        almacenCentral.getUbicacion(),
+                        "Recarga de GLP en almacén central"
+                );
+            }
+        }
 
         for (Ubicacion siguiente : secuenciaNodos) {
             int distanciaAlSiguiente = actual.distanciaA(siguiente);
@@ -331,25 +433,37 @@ public class Ruta {
 
             // Si no hay suficiente combustible, buscar recarga
             if (combustibleActual < consumoTotal) {
-                // Buscar almacén más cercano a la ubicación actual
-                Almacen almacenMasCercano = mapa.obtenerAlmacenMasCercano(actual);
+                // MODIFICADO: Decidir qué almacén usar para recargar
+                Almacen almacenParaRecargar;
+
+                // Si la ruta tiene alta demanda de GLP o contiene pedidos urgentes, priorizar almacén central
+                boolean hayPedidosUrgentes = pedidosAsignados.stream()
+                        .anyMatch(p -> p.getTiempoLimiteEntrega().toHours() < 8);
+
+                if (necesitaRecargaGLP || hayPedidosUrgentes) {
+                    // Priorizar el almacén central para rutas importantes
+                    almacenParaRecargar = almacenCentral;
+                } else {
+                    // Para rutas estándar, usar el almacén más cercano
+                    almacenParaRecargar = mapa.obtenerAlmacenMasCercano(actual);
+                }
 
                 // Añadir desvío al almacén para recargar
-                nuevaSecuencia.add(almacenMasCercano.getUbicacion());
+                nuevaSecuencia.add(almacenParaRecargar.getUbicacion());
 
                 // Registrar el evento de recarga
                 registrarEvento(
                         EventoRuta.TipoEvento.RECARGA_COMBUSTIBLE,
-                        LocalDateTime.now() ,
-                        almacenMasCercano.getUbicacion(),
-                        "Recarga de combustible en " + almacenMasCercano.getId()
+                        LocalDateTime.now(),
+                        almacenParaRecargar.getUbicacion(),
+                        "Recarga de combustible en " + almacenParaRecargar.getId()
                 );
 
                 // Actualizar el combustible (tanque lleno)
                 combustibleActual = camion.getCapacidadTanqueCombustible();
 
                 // Ahora vamos desde el almacén al siguiente punto
-                actual = almacenMasCercano.getUbicacion();
+                actual = almacenParaRecargar.getUbicacion();
                 distanciaAlSiguiente = actual.distanciaA(siguiente);
                 consumoHastaSiguiente = camion.calcularConsumoCombustible(distanciaAlSiguiente);
             }

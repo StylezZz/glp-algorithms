@@ -42,6 +42,11 @@ public class AlgoritmoACO {
     private double[][] matrizFeromonas;
     private double[][] matrizHeuristica;
 
+    private double feromonaMinima;
+    private double feromonaMaxima;
+
+    private List<Double> historialFitness = new ArrayList<>();
+
     /**
      * Constructor con parámetros predeterminados
      */
@@ -105,7 +110,8 @@ public class AlgoritmoACO {
 
             // Cada hormiga construye una solución
             for (int hormiga = 0; hormiga < numHormigas; hormiga++) {
-                Solucion solucion = construirSolucion();
+                double q0Actual = calcularQ0Adaptativo(iteracion);
+                Solucion solucion = construirSolucion(q0Actual);
                 soluciones.add(solucion);
 
                 // Actualizar mejor solución global si es necesario
@@ -113,6 +119,7 @@ public class AlgoritmoACO {
                     mejorSolucion = solucion.rutas;
                     mejorFitness = solucion.fitness;
                     System.out.println("Iter " + iteracion + ", Hormiga " + hormiga + ": Nuevo mejor fitness = " + mejorFitness);
+                    historialFitness.add(mejorFitness);
                 }
             }
 
@@ -144,13 +151,11 @@ public class AlgoritmoACO {
      * Preprocesa los pedidos dividiéndolos si son muy grandes
      */
     private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales) {
-        List<Pedido> pedidosOrdenados = pedidosOriginales.stream()
-                .sorted(Comparator
-                        .comparing((Pedido p) -> p.getTiempoLimiteEntrega().toHours())
-                        .thenComparing(p -> -p.getCantidadGLP())) // Negativo para ordenar de mayor a menor
-                .collect(Collectors.toList());
+//        List<Pedido> pedidosOrdenados = pedidosOriginales.stream()
+//                .sorted(Comparator.comparing(Pedido::getHoraRecepcion))
+//                .collect(Collectors.toList());
         List<Pedido> pedidosProcesados = new ArrayList<>();
-        for (Pedido pedido : pedidosOrdenados) {
+        for (Pedido pedido : pedidosOriginales) {
             if (pedido.getCantidadGLP() <= 12.0) {
                 pedidosProcesados.add(pedido);
                 continue;
@@ -255,8 +260,16 @@ public class AlgoritmoACO {
 
         // Inicializar feromonas con valor inicial
         for (int i = 0; i < numPedidos; i++) {
+            Pedido pedido = pedidosPendientes.get(i);
+            double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
+            double feromonaInicial = inicialFeromona;
+            if(horasLimite<6){
+                feromonaInicial*=2.0;
+            }else{
+                feromonaInicial*=1.5;
+            }
             for (int j = 0; j <= numCamiones; j++) {
-                matrizFeromonas[i][j] = inicialFeromona;
+                matrizFeromonas[i][j] = feromonaInicial;
             }
         }
 
@@ -303,7 +316,7 @@ public class AlgoritmoACO {
     /**
      * Construye una solución completa (una hormiga)
      */
-    private Solucion construirSolucion() {
+    private Solucion construirSolucion(double q0Actual) {
         int numPedidos = pedidosPendientes.size();
         int numCamiones = camionesDisponibles.size();
 
@@ -580,9 +593,49 @@ public class AlgoritmoACO {
             ruta.agregarPedido(pedido);
         }
 
+        // NUEVA SECCIÓN: Optimizar la carga inicial de cada camión
+        for (Map.Entry<String, Ruta> entry : rutasPorCamion.entrySet()) {
+            String codigoCamion = entry.getKey();
+            Ruta ruta = entry.getValue();
+
+            // Encontrar el camión correspondiente
+            Camion camion = camionesDisponibles.stream()
+                    .filter(c -> c.getCodigo().equals(codigoCamion))
+                    .findFirst()
+                    .orElse(null);
+
+            if (camion != null) {
+                // Calcular el GLP total necesario para esta ruta
+                double glpNecesario = ruta.getPedidosAsignados().stream()
+                        .mapToDouble(Pedido::getCantidadGLP)
+                        .sum();
+
+                // Limpiar el nivel actual de GLP (para asegurar valor exacto)
+                camion.setNivelGLPActual(0.0);
+
+                // Cargar el camión con la cantidad exacta de GLP necesaria (sin exceder su capacidad)
+                double cargaOptima = Math.min(glpNecesario, camion.getCapacidadTanqueGLP());
+                camion.cargarGLP(cargaOptima);
+
+                // Si la ruta requiere más GLP del que el camión puede llevar en un viaje,
+                // modificamos la optimización para incluir paradas en el almacén principal
+                if (glpNecesario > camion.getCapacidadTanqueGLP()) {
+                    ruta.setRequiereReabastecimiento(true);
+                    // Marcamos para optimización especial
+                }
+            }
+        }
+
         // Optimizar el orden de cada ruta
         for (Ruta ruta : rutasPorCamion.values()) {
+            Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
             ruta.optimizarSecuenciaConBloqueos(mapa,momentoActual);
+            double glpTotal = ruta.getPedidosAsignados().stream().mapToDouble(Pedido::getCantidadGLP).sum();
+
+            if(camion!=null && glpTotal>camion.getCapacidadTanqueGLP()){
+                ruta.setRequiereReabastecimiento(true);
+                ruta.optimizarConRecargas(mapa,camion);
+            }
         }
 
         return new ArrayList<>(rutasPorCamion.values());
@@ -598,9 +651,12 @@ public class AlgoritmoACO {
         double pedidosNoAsignados = pedidosPendientes.size(); // Inicialmente, todos no asignados
         double sobrecargaTotal = 0.0;   // Suma de sobrecargas de GLP en camiones
         double penalizacionAverias = 0.0; // Penalización por probabilidad de averías
+        double bonificacionAlmacenPrincipal = 0.0;
 
+        Ubicacion ubicacionAlmacenPrincipal = mapa.obtenerAlmacenCentral().getUbicacion();
         // Conjunto de pedidos asignados
         Set<String> pedidosAsignadosIds = new HashSet<>();
+        List<Double> porcentajesUso = new ArrayList<>();
 
         // Evaluar cada ruta
         for (Ruta ruta : rutas) {
@@ -629,6 +685,19 @@ public class AlgoritmoACO {
 
             if (glpTotal > camion.getCapacidadTanqueGLP()) {
                 sobrecargaTotal += (glpTotal - camion.getCapacidadTanqueGLP());
+            }
+
+            List<Ubicacion> nodos = ruta.getSecuenciaNodos();
+            long visitasAlmacenPrincipal = nodos.stream()
+                    .filter(nodo->nodo.equals(ubicacionAlmacenPrincipal)).count();
+
+            if(visitasAlmacenPrincipal>0 && glpTotal > camion.getCapacidadTanqueGLP()){
+                // La ruta necesita reabastecimiento y lo hace correctamente
+                double eficienciaReabastecimiento = Math.min(1.0, visitasAlmacenPrincipal /
+                        (Math.ceil(glpTotal / camion.getCapacidadTanqueGLP()) - 1));
+
+                // Mayor bonificación para rutas que utilizan el reabastecimiento de manera eficiente
+                bonificacionAlmacenPrincipal += glpTotal * 0.5 * eficienciaReabastecimiento;
             }
 
             // Calcular retrasos potenciales
@@ -664,14 +733,41 @@ public class AlgoritmoACO {
 
         pedidosNoAsignados = idsBasePendientes.size();
 
+        double penalizacionDesviacion = 0;
+        if (porcentajesUso.size() > 1) {
+            double media = porcentajesUso.stream().mapToDouble(d -> d).average().orElse(0);
+            double sumaCuadrados = porcentajesUso.stream().mapToDouble(p -> Math.pow(p - media, 2)).sum();
+            double desviacionCarga = Math.sqrt(sumaCuadrados / porcentajesUso.size());
+            penalizacionDesviacion = desviacionCarga * 500;  // Factor de penalización ajustable
+        }
+
         // Calcular fitness final (ponderado) con mayor penalización por pedidos no asignados
-        double fitness = 0.03 * distanciaTotal +
-                0.05 * retrasosTotal +
-                0.80 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
+        double fitness = 0.02 * distanciaTotal +
+                0.03 * retrasosTotal +
+                0.90 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
                 0.03 * (sobrecargaTotal * 1000) +     // Reducir penalización por sobrecarga
-                0.02 * penalizacionAverias;           // Reducir penalización por averías
+                0.02 * penalizacionAverias -
+                0.05*bonificacionAlmacenPrincipal;       // Reducir penalización por averías
 
         return fitness;
+    }
+
+    private double calcularQ0Adaptativo(int iteracion){
+        double q0Base = this.q0;
+        double q0Max = 0.95;
+        double progreso = (double) iteracion / numIteraciones;
+
+        return q0Base + (q0Max -q0Base)*(1.0/(1.0+Math.exp(-12*progreso+6)));
+    }
+
+    private void actualizarLimitesMMAS(){
+        if(mejorFitness>0){
+            feromonaMaxima = 1.0/((1-rho)*mejorFitness);
+            feromonaMinima = feromonaMaxima*0.1;
+        }else{
+            feromonaMaxima = 10.0;
+            feromonaMinima = 0.01;
+        }
     }
 
     /**
@@ -731,6 +827,16 @@ public class AlgoritmoACO {
                 }
             }
         }
+
+        for(int i=0;i<matrizFeromonas.length;i++){
+            for(int j=0;j<matrizFeromonas[i].length;j++){
+                if(matrizFeromonas[i][j]>feromonaMaxima){
+                    matrizFeromonas[i][j]=feromonaMaxima;
+                }else if(matrizFeromonas[i][j]<feromonaMinima){
+                    matrizFeromonas[i][j]=feromonaMinima;
+                }
+            }
+        }
     }
 
     /**
@@ -766,8 +872,25 @@ public class AlgoritmoACO {
             }
         }
 
+        boolean convergenciaFeromonas = filasConvergidas >= matrizFeromonas.length*0.85;
+
+        boolean estabilidadFitness = false;
+
+        if (historialFitness.size() >= 10) {
+            double ultimoFitness = historialFitness.get(historialFitness.size() - 1);
+            double desviacionMax = 0.001 * ultimoFitness;
+
+            estabilidadFitness = true;
+            for (int i = historialFitness.size() - 10; i < historialFitness.size(); i++) {
+                if (Math.abs(historialFitness.get(i) - ultimoFitness) > desviacionMax) {
+                    estabilidadFitness = false;
+                    break;
+                }
+            }
+        }
+
         // Necesitamos una proporción mayor para considerar convergencia
-        return filasConvergidas >= matrizFeromonas.length * 0.85; // Aumentado de 0.7 a 0.85
+        return convergenciaFeromonas && estabilidadFitness;
     }
 
     /**
