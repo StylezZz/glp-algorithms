@@ -226,14 +226,22 @@ public class Ruta {
         List<Ubicacion> pendientes = new ArrayList<>(secuenciaNodos);
 
         Ubicacion actual = origen;
+        LocalDateTime tiempoActual = momento;
+
         while (!pendientes.isEmpty()) {
             // Encontrar la mejor ruta al siguiente punto considerando bloqueos
             Ubicacion mejorSiguiente = null;
             List<Ubicacion> mejorRuta = null;
+            LocalDateTime mejorTiempoLlegada = null;
 
             for (Ubicacion destino : pendientes) {
-                // Usar A* para encontrar la ruta óptima evitando bloqueos
-                List<Ubicacion> ruta = mapa.encontrarRuta(actual, destino, momento);
+                // Calcular tiempo para llegar al destino
+                int distanciaDirecta = actual.distanciaA(destino);
+                long segundosViaje = (long) (distanciaDirecta / 50.0 * 3600); // 50 km/h
+                LocalDateTime tiempoEstimadoLlegada = tiempoActual.plusSeconds(segundosViaje);
+
+                // Usar A* para encontrar la ruta óptima evitando bloqueos activos en el momento de llegada
+                List<Ubicacion> ruta = mapa.encontrarRutaConTiempo(actual, destino, tiempoActual, 50.0);
 
                 // Si no hay ruta posible por bloqueos, intentar con el siguiente destino
                 if (ruta.isEmpty()) continue;
@@ -245,6 +253,10 @@ public class Ruta {
                 if (mejorRuta == null || distanciaRuta < calcularDistanciaRuta(mejorRuta)) {
                     mejorSiguiente = destino;
                     mejorRuta = ruta;
+
+                    // Calcular tiempo de llegada para esta ruta
+                    long segundosRuta = (long) (distanciaRuta / 50.0 * 3600);
+                    mejorTiempoLlegada = tiempoActual.plusSeconds(segundosRuta);
                 }
             }
 
@@ -255,6 +267,7 @@ public class Ruta {
             nuevaSecuencia.add(mejorSiguiente);
             pendientes.remove(mejorSiguiente);
             actual = mejorSiguiente;
+            tiempoActual = mejorTiempoLlegada; // Actualizar el tiempo actual
         }
 
         // Actualizar la secuencia de nodos
@@ -353,6 +366,29 @@ public class Ruta {
             distancia += ruta.get(i).distanciaA(ruta.get(i + 1));
         }
         return distancia;
+    }
+
+    /**
+     * Calcula los tiempos estimados de llegada a cada nodo en la ruta
+     * @param momentoInicio Momento de inicio de la ruta
+     * @param velocidadKmH Velocidad del camión en km/h
+     * @return Mapa con los tiempos estimados de llegada a cada ubicación
+     */
+    public Map<Ubicacion, LocalDateTime> calcularTiemposLlegada(LocalDateTime momentoInicio, double velocidadKmH) {
+        Map<Ubicacion, LocalDateTime> tiemposLlegada = new HashMap<>();
+        LocalDateTime tiempoActual = momentoInicio;
+        Ubicacion actual = origen;
+
+        for (Ubicacion siguiente : secuenciaNodos) {
+            int distancia = actual.distanciaA(siguiente);
+            // Convertir distancia a segundos según velocidad (50 km/h = 72 segundos por km)
+            long segundosViaje = (long) ((double) distancia / velocidadKmH * 3600);
+            tiempoActual = tiempoActual.plusSeconds(segundosViaje);
+            tiemposLlegada.put(siguiente, tiempoActual);
+            actual = siguiente;
+        }
+
+        return tiemposLlegada;
     }
 
     /**

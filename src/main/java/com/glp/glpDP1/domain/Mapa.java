@@ -243,6 +243,124 @@ public class Mapa {
         return new ArrayList<>();
     }
 
+    /**
+     * Encuentra la ruta más corta considerando bloqueos en los tiempos futuros de llegada
+     * @param origen Ubicación de origen
+     * @param destino Ubicación de destino
+     * @param momentoInicio Momento de inicio del recorrido
+     * @param velocidadKmH Velocidad del camión en km/h
+     * @return Lista de ubicaciones que forman la ruta, o lista vacía si no hay ruta posible
+     */
+    public List<Ubicacion> encontrarRutaConTiempo(Ubicacion origen, Ubicacion destino,
+                                                  LocalDateTime momentoInicio, double velocidadKmH) {
+        // Si origen y destino son iguales, la ruta es el propio punto
+        if (origen.equals(destino)) {
+            List<Ubicacion> rutaSimple = new ArrayList<>();
+            rutaSimple.add(origen);
+            return rutaSimple;
+        }
+
+        // Si origen está bloqueado en el momento inicial, no hay ruta
+        if (estaBloqueado(origen, momentoInicio)) {
+            return new ArrayList<>();
+        }
+
+        // Conjunto de nodos visitados
+        Set<Ubicacion> visitados = new HashSet<>();
+
+        // Cola de prioridad para los nodos a explorar (ordenados por f = g + h)
+        PriorityQueue<NodoRutaTemporal> abiertos = new PriorityQueue<>(
+                Comparator.comparingInt(n -> n.g + n.h)
+        );
+
+        // Mapa para reconstruir la ruta
+        Map<Ubicacion, Ubicacion> padres = new HashMap<>();
+
+        // Mapa de valores g (costo real hasta el nodo)
+        Map<Ubicacion, Integer> valoresG = new HashMap<>();
+
+        // Mapa de tiempos de llegada a cada nodo
+        Map<Ubicacion, LocalDateTime> tiemposLlegada = new HashMap<>();
+
+        // Inicializar con el nodo origen
+        abiertos.add(new NodoRutaTemporal(origen, 0, origen.distanciaA(destino), momentoInicio));
+        valoresG.put(origen, 0);
+        tiemposLlegada.put(origen, momentoInicio);
+
+        while (!abiertos.isEmpty()) {
+            // Extraer el nodo con menor f = g + h
+            NodoRutaTemporal nodoActual = abiertos.poll();
+            Ubicacion actual = nodoActual.ubicacion;
+            LocalDateTime tiempoActual = nodoActual.tiempoLlegada;
+
+            // Si llegamos al destino, reconstruir y devolver la ruta
+            if (actual.equals(destino)) {
+                return reconstruirRuta(padres, destino);
+            }
+
+            // Marcar como visitado
+            visitados.add(actual);
+
+            // Explorar los vecinos en las 4 direcciones
+            List<Ubicacion> vecinos = obtenerVecinos(actual);
+
+            for (Ubicacion vecino : vecinos) {
+                // Calcular tiempo de llegada al vecino
+                long segundosViaje = (long) (1.0 / velocidadKmH * 3600); // 1 km a la velocidad dada
+                LocalDateTime tiempoLlegadaVecino = tiempoActual.plusSeconds(segundosViaje);
+
+                // Verificar si el vecino es válido (dentro del mapa y no bloqueado en el momento de llegada)
+                if (!esUbicacionValida(vecino) ||
+                        estaBloqueado(vecino, tiempoLlegadaVecino) ||
+                        tramoBloqueado(actual, vecino, tiempoLlegadaVecino) ||
+                        visitados.contains(vecino)) {
+                    continue;
+                }
+
+                // Calcular el nuevo valor de g (costo real)
+                int nuevoG = valoresG.get(actual) + 1;  // Costo de moverse a un vecino adyacente = 1
+
+                // Si no está en la lista abierta o encontramos un camino mejor
+                if (!valoresG.containsKey(vecino) || nuevoG < valoresG.get(vecino)) {
+                    // Actualizar el mapa de padres
+                    padres.put(vecino, actual);
+
+                    // Actualizar el valor de g
+                    valoresG.put(vecino, nuevoG);
+
+                    // Actualizar tiempo de llegada
+                    tiemposLlegada.put(vecino, tiempoLlegadaVecino);
+
+                    // Calcular la heurística (distancia Manhattan al destino)
+                    int h = vecino.distanciaA(destino);
+
+                    // Añadir a la lista abierta
+                    abiertos.add(new NodoRutaTemporal(vecino, nuevoG, h, tiempoLlegadaVecino));
+                }
+            }
+        }
+
+        // Si llegamos aquí, no hay ruta posible
+        return new ArrayList<>();
+    }
+
+    /**
+     * Clase auxiliar para el algoritmo A* con tiempo
+     */
+    private static class NodoRutaTemporal {
+        private final Ubicacion ubicacion;
+        private final int g;  // Costo real desde origen
+        private final int h;  // Heurística (estimación) hasta destino
+        private final LocalDateTime tiempoLlegada;  // Tiempo estimado de llegada
+
+        public NodoRutaTemporal(Ubicacion ubicacion, int g, int h, LocalDateTime tiempoLlegada) {
+            this.ubicacion = ubicacion;
+            this.g = g;
+            this.h = h;
+            this.tiempoLlegada = tiempoLlegada;
+        }
+    }
+
     // Método auxiliar para obtener todos los vecinos posibles
     private List<Ubicacion> obtenerVecinos(Ubicacion ubicacion) {
         List<Ubicacion> vecinos = new ArrayList<>();

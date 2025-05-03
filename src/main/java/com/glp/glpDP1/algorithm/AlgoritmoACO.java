@@ -15,7 +15,8 @@ import java.util.stream.Collectors;
  * Implementación del algoritmo de Optimización de Colonia de Hormigas (ACO)
  * para la optimización de rutas de distribución de GLP considerando averías y mantenimientos
  */
-@Getter @Setter
+@Getter
+@Setter
 public class AlgoritmoACO {
 
     // Parámetros del algoritmo
@@ -56,12 +57,13 @@ public class AlgoritmoACO {
 
     /**
      * Constructor con parámetros personalizados
-     * @param numHormigas Número de hormigas en la colonia
-     * @param numIteraciones Número máximo de iteraciones
-     * @param alfa Importancia de las feromonas
-     * @param beta Importancia de la heurística
-     * @param rho Tasa de evaporación de feromonas
-     * @param q0 Parámetro de exploración vs explotación (0-1)
+     *
+     * @param numHormigas     Número de hormigas en la colonia
+     * @param numIteraciones  Número máximo de iteraciones
+     * @param alfa            Importancia de las feromonas
+     * @param beta            Importancia de la heurística
+     * @param rho             Tasa de evaporación de feromonas
+     * @param q0              Parámetro de exploración vs explotación (0-1)
      * @param inicialFeromona Valor inicial de feromonas
      */
     public AlgoritmoACO(int numHormigas, int numIteraciones, double alfa, double beta,
@@ -77,10 +79,11 @@ public class AlgoritmoACO {
 
     /**
      * Ejecuta el algoritmo ACO para encontrar la mejor asignación de rutas
+     *
      * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa de la ciudad
-     * @param momento Momento actual para la planificación
+     * @param pedidos  Lista de pedidos pendientes
+     * @param mapa     Mapa de la ciudad
+     * @param momento  Momento actual para la planificación
      * @return Lista de rutas optimizadas
      */
     public List<Ruta> optimizarRutas(List<Camion> camiones, List<Pedido> pedidos,
@@ -134,11 +137,15 @@ public class AlgoritmoACO {
         }
 
         // Optimizar las rutas finales (recargas, etc.)
+        // Optimizar las rutas finales (recargas, etc.)
         if (mejorSolucion != null) {
             for (Ruta ruta : mejorSolucion) {
                 Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
                 if (camion != null) {
-                    //ruta.optimizarSecuenciaConBloqueos(mapa,momentoActual);
+                    // Primero optimizar la secuencia considerando el tiempo y los bloqueos
+                    // ruta.optimizarSecuenciaConBloqueos(mapa, momentoActual);
+
+                    // Luego optimizar las recargas (el método ya verifica internamente si se requiere reabastecimiento)
                     ruta.optimizarConRecargas(mapa, camion);
                 }
             }
@@ -166,17 +173,19 @@ public class AlgoritmoACO {
 
             double sizeMaximoParte;
             if (cantidadRestante > 40.0) {
-                sizeMaximoParte = 13.0; // Pedidos muy grandes en partes de 13m³
+                sizeMaximoParte = 25.0; // Pedidos muy grandes en partes de 13m³
             } else if (cantidadRestante > 25.0) {
                 sizeMaximoParte = 15.0; // Pedidos grandes en partes de 15m³
             } else {
-                sizeMaximoParte = 12.0; // Resto en partes de 12m³
+                sizeMaximoParte = 10.0; // Resto en partes de 12m³
             }
+            String idPedido = UUID.randomUUID().toString();
             while (cantidadRestante > 0) {
                 double cantidadParte = Math.min(cantidadRestante, sizeMaximoParte);
                 cantidadRestante -= cantidadParte;
 
                 Pedido pedidoParte = new Pedido(
+                        idPedido,
                         pedido.getIdCliente() + "_parte" + contador,
                         pedido.getUbicacion(),
                         cantidadParte,
@@ -220,23 +229,30 @@ public class AlgoritmoACO {
         return false;
     }
 
-    private double calcularPenalizacionBloqueos(Ubicacion origen, Ubicacion destino, LocalDateTime momento) {
+    private double calcularPenalizacionBloqueos(Ubicacion origen, Ubicacion destino, LocalDateTime momentoBase) {
         // Factor de penalización base
         double penalizacion = 1.0;
 
+        // Calcular tiempo estimado de llegada al destino
+        double distancia = origen.distanciaA(destino);
+        long segundosViaje = (long) (distancia / 50.0 * 3600); // 50 km/h
+        LocalDateTime tiempoLlegada = momentoBase.plusSeconds(segundosViaje);
+
         // Verificar cada posible bloqueo
         for (Bloqueo bloqueo : mapa.getBloqueos()) {
-            // Si el tramo está bloqueado, aumentar penalización
-            if (bloqueo.tramoBloqueado(origen, destino, momento)) {
+            // Si el tramo estará bloqueado al momento de llegar, aumentar penalización
+            if (bloqueo.tramoBloqueado(origen, destino, tiempoLlegada)) {
                 penalizacion *= 10.0; // Penalización fuerte
                 return penalizacion; // Retornar inmediatamente
             }
 
-            // Si algún nodo está bloqueado, también penalizar
+            // Si algún nodo estará bloqueado al momento de llegar, también penalizar
             for (Ubicacion nodo : bloqueo.getNodosBloqueados()) {
                 // Si está cerca del origen o destino (menos de 3 unidades)
                 if (origen.distanciaA(nodo) <= 3 || destino.distanciaA(nodo) <= 3) {
-                    penalizacion *= 2.0;
+                    if (bloqueo.estaBloqueado(nodo, tiempoLlegada)) {
+                        penalizacion *= 2.0;
+                    }
                 }
             }
         }
@@ -263,10 +279,10 @@ public class AlgoritmoACO {
             Pedido pedido = pedidosPendientes.get(i);
             double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
             double feromonaInicial = inicialFeromona;
-            if(horasLimite<6){
-                feromonaInicial*=2.0;
-            }else{
-                feromonaInicial*=1.5;
+            if (horasLimite < 6) {
+                feromonaInicial *= 2.0;
+            } else {
+                feromonaInicial *= 1.5;
             }
             for (int j = 0; j <= numCamiones; j++) {
                 matrizFeromonas[i][j] = feromonaInicial;
@@ -300,11 +316,11 @@ public class AlgoritmoACO {
                 if (!capacidadSuficiente || !combustibleSuficiente) {
                     matrizHeuristica[i][j] = 0.001;
                 } else {
-                    double valorBase = 1.0/(consumoEstimado+0.1);
+                    double valorBase = 1.0 / (consumoEstimado + 0.1);
                     double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
-                    double factorUrgencia = horasLimite < 8 ? 2.0: 1.0;
+                    double factorUrgencia = horasLimite < 8 ? 2.0 : 1.0;
                     // Inversamente proporcional al consumo (menor consumo = mejor)
-                    matrizHeuristica[i][j] = (valorBase*factorUrgencia)/penalizacionBloqueos;
+                    matrizHeuristica[i][j] = (valorBase * factorUrgencia) / penalizacionBloqueos;
                 }
             }
 
@@ -629,12 +645,12 @@ public class AlgoritmoACO {
         // Optimizar el orden de cada ruta
         for (Ruta ruta : rutasPorCamion.values()) {
             Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
-            ruta.optimizarSecuenciaConBloqueos(mapa,momentoActual);
+            ruta.optimizarSecuenciaConBloqueos(mapa, momentoActual);
             double glpTotal = ruta.getPedidosAsignados().stream().mapToDouble(Pedido::getCantidadGLP).sum();
 
-            if(camion!=null && glpTotal>camion.getCapacidadTanqueGLP()){
+            if (camion != null && glpTotal > camion.getCapacidadTanqueGLP()) {
                 ruta.setRequiereReabastecimiento(true);
-                ruta.optimizarConRecargas(mapa,camion);
+                ruta.optimizarConRecargas(mapa, camion);
             }
         }
 
@@ -689,9 +705,9 @@ public class AlgoritmoACO {
 
             List<Ubicacion> nodos = ruta.getSecuenciaNodos();
             long visitasAlmacenPrincipal = nodos.stream()
-                    .filter(nodo->nodo.equals(ubicacionAlmacenPrincipal)).count();
+                    .filter(nodo -> nodo.equals(ubicacionAlmacenPrincipal)).count();
 
-            if(visitasAlmacenPrincipal>0 && glpTotal > camion.getCapacidadTanqueGLP()){
+            if (visitasAlmacenPrincipal > 0 && glpTotal > camion.getCapacidadTanqueGLP()) {
                 // La ruta necesita reabastecimiento y lo hace correctamente
                 double eficienciaReabastecimiento = Math.min(1.0, visitasAlmacenPrincipal /
                         (Math.ceil(glpTotal / camion.getCapacidadTanqueGLP()) - 1));
@@ -707,7 +723,7 @@ public class AlgoritmoACO {
                 int distanciaAlPedido = origen.distanciaA(pedido.getUbicacion());
                 double horasViaje = distanciaAlPedido / 50.0; // 50 km/h velocidad promedio
 
-                LocalDateTime entregaEstimada = momentoActual.plusMinutes((long)(horasViaje * 60));
+                LocalDateTime entregaEstimada = momentoActual.plusMinutes((long) (horasViaje * 60));
 
                 // Si entrega estimada es posterior a la hora límite, hay retraso
                 if (entregaEstimada.isAfter(pedido.getHoraLimiteEntrega())) {
@@ -718,10 +734,8 @@ public class AlgoritmoACO {
         }
 
         // Actualizar pedidos no asignados
-        pedidosNoAsignados =0;
         Set<String> idsBasePendientes = new HashSet<>();
-
-        for(Pedido pedido:pedidosPendientes){
+        for (Pedido pedido : pedidosPendientes) {
             String idBase = pedido.getId().contains("_parte")
                     ? pedido.getId().substring(0, pedido.getId().indexOf("_parte"))
                     : pedido.getId();
@@ -730,7 +744,6 @@ public class AlgoritmoACO {
                 idsBasePendientes.add(idBase);
             }
         }
-
         pedidosNoAsignados = idsBasePendientes.size();
 
         double penalizacionDesviacion = 0;
@@ -747,24 +760,24 @@ public class AlgoritmoACO {
                 0.90 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
                 0.03 * (sobrecargaTotal * 1000) +     // Reducir penalización por sobrecarga
                 0.02 * penalizacionAverias -
-                0.05*bonificacionAlmacenPrincipal;       // Reducir penalización por averías
+                0.05 * bonificacionAlmacenPrincipal;       // Reducir penalización por averías
 
         return fitness;
     }
 
-    private double calcularQ0Adaptativo(int iteracion){
+    private double calcularQ0Adaptativo(int iteracion) {
         double q0Base = this.q0;
         double q0Max = 0.95;
         double progreso = (double) iteracion / numIteraciones;
 
-        return q0Base + (q0Max -q0Base)*(1.0/(1.0+Math.exp(-12*progreso+6)));
+        return q0Base + (q0Max - q0Base) * (1.0 / (1.0 + Math.exp(-12 * progreso + 6)));
     }
 
-    private void actualizarLimitesMMAS(){
-        if(mejorFitness>0){
-            feromonaMaxima = 1.0/((1-rho)*mejorFitness);
-            feromonaMinima = feromonaMaxima*0.1;
-        }else{
+    private void actualizarLimitesMMAS() {
+        if (mejorFitness > 0) {
+            feromonaMaxima = 1.0 / ((1 - rho) * mejorFitness);
+            feromonaMinima = feromonaMaxima * 0.1;
+        } else {
             feromonaMaxima = 10.0;
             feromonaMinima = 0.01;
         }
@@ -828,12 +841,12 @@ public class AlgoritmoACO {
             }
         }
 
-        for(int i=0;i<matrizFeromonas.length;i++){
-            for(int j=0;j<matrizFeromonas[i].length;j++){
-                if(matrizFeromonas[i][j]>feromonaMaxima){
-                    matrizFeromonas[i][j]=feromonaMaxima;
-                }else if(matrizFeromonas[i][j]<feromonaMinima){
-                    matrizFeromonas[i][j]=feromonaMinima;
+        for (int i = 0; i < matrizFeromonas.length; i++) {
+            for (int j = 0; j < matrizFeromonas[i].length; j++) {
+                if (matrizFeromonas[i][j] > feromonaMaxima) {
+                    matrizFeromonas[i][j] = feromonaMaxima;
+                } else if (matrizFeromonas[i][j] < feromonaMinima) {
+                    matrizFeromonas[i][j] = feromonaMinima;
                 }
             }
         }
@@ -872,7 +885,7 @@ public class AlgoritmoACO {
             }
         }
 
-        boolean convergenciaFeromonas = filasConvergidas >= matrizFeromonas.length*0.85;
+        boolean convergenciaFeromonas = filasConvergidas >= matrizFeromonas.length * 0.85;
 
         boolean estabilidadFitness = false;
 
@@ -920,7 +933,8 @@ public class AlgoritmoACO {
 
     /**
      * Simula la posibilidad de avería en un camión durante la simulación
-     * @param camion Camión a evaluar
+     *
+     * @param camion    Camión a evaluar
      * @param distancia Distancia que recorrería
      * @return true si hay avería, false si no
      */
@@ -955,6 +969,7 @@ public class AlgoritmoACO {
 
     /**
      * Determina el tipo de avería aleatoriamente
+     *
      * @return Tipo de incidente
      */
     private TipoIncidente determinarTipoAveria() {

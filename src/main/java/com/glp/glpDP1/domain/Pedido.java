@@ -33,6 +33,17 @@ public class Pedido {
         this.entregado = false;
     }
 
+    public Pedido(String idPedido, String idCliente, Ubicacion ubicacion, double cantidadGLP,
+                  LocalDateTime horaRecepcion, int horasLimiteEntrega) {
+        this.id = idPedido;
+        this.idCliente = idCliente;
+        this.ubicacion = ubicacion;
+        this.cantidadGLP = cantidadGLP;
+        this.horaRecepcion = horaRecepcion;
+        this.tiempoLimiteEntrega = Duration.ofHours(horasLimiteEntrega);
+        this.entregado = false;
+    }
+
     // Constructor para pedidos desde archivo
     public Pedido(String idCliente, Ubicacion ubicacion, double cantidadGLP,
                   String momentoStr, int horasLimiteEntrega) {

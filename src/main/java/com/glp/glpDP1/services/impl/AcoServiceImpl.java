@@ -38,17 +38,18 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Ejecuta el algoritmo ACO para optimizar rutas
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa con información de la ciudad
-     * @param momento Momento actual para planificación
-     * @param escenario Escenario de simulación
-     * @param numHormigas Número de hormigas en la colonia
+     *
+     * @param camiones       Lista de camiones disponibles
+     * @param pedidos        Lista de pedidos pendientes
+     * @param mapa           Mapa con información de la ciudad
+     * @param momento        Momento actual para planificación
+     * @param escenario      Escenario de simulación
+     * @param numHormigas    Número de hormigas en la colonia
      * @param numIteraciones Número máximo de iteraciones
-     * @param alfa Importancia de las feromonas
-     * @param beta Importancia de la heurística
-     * @param rho Tasa de evaporación de feromonas
-     * @param q0 Parámetro de exploración vs explotación (0-1)
+     * @param alfa           Importancia de las feromonas
+     * @param beta           Importancia de la heurística
+     * @param rho            Tasa de evaporación de feromonas
+     * @param q0             Parámetro de exploración vs explotación (0-1)
      * @return ID de la ejecución
      */
     @Override
@@ -183,10 +184,11 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Ejecuta el algoritmo ACO con parámetros optimizados
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa con información de la ciudad
-     * @param momento Momento actual para planificación
+     *
+     * @param camiones  Lista de camiones disponibles
+     * @param pedidos   Lista de pedidos pendientes
+     * @param mapa      Mapa con información de la ciudad
+     * @param momento   Momento actual para planificación
      * @param escenario Escenario de simulación
      * @return ID de la ejecución
      */
@@ -216,6 +218,7 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Obtiene el estado de una ejecución
+     *
      * @param id ID de la ejecución
      * @return Estado actual
      */
@@ -230,6 +233,7 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Obtiene los resultados de una ejecución completada
+     *
      * @param id ID de la ejecución
      * @return Resultados de la optimización
      */
@@ -256,6 +260,7 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Cancela una ejecución en curso
+     *
      * @param id ID de la ejecución
      * @return true si se canceló, false si no
      */
@@ -279,11 +284,12 @@ public class AcoServiceImpl implements ACOService {
 
     /**
      * Ejecuta múltiples instancias del algoritmo ACO y devuelve la mejor solución
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa con información de la ciudad
-     * @param momento Momento actual para planificación
-     * @param escenario Escenario de simulación
+     *
+     * @param camiones       Lista de camiones disponibles
+     * @param pedidos        Lista de pedidos pendientes
+     * @param mapa           Mapa con información de la ciudad
+     * @param momento        Momento actual para planificación
+     * @param escenario      Escenario de simulación
      * @param numEjecuciones Número de ejecuciones independientes
      * @return Resultado de la mejor ejecución
      */
@@ -387,6 +393,10 @@ public class AcoServiceImpl implements ACOService {
     }
 
     private int calcularPedidosEntregados(List<Ruta> rutas) {
-        return rutas.stream().mapToInt(ruta -> ruta.getPedidosAsignados().size()).sum();
+        return (int) rutas.stream()
+                .flatMap(ruta -> ruta.getPedidosAsignados().stream())
+                .map(Pedido::getId)
+                .distinct()
+                .count();
     }
 }
