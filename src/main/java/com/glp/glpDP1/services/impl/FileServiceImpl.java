@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,17 @@ public class FileServiceImpl implements FileService {
 
     private static final Pattern FECHA_HORA_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m");
     private static final Pattern FECHA_HORA_RANGO_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m-(\\d+)d(\\d+)h(\\d+)m");
+
+    public List<Pedido> cargarPedidosPorDia(InputStream inputStream,LocalDateTime fechaReferencia){
+        List<Pedido> todosPedidos = cargarPedidos(inputStream);
+
+        return todosPedidos.stream().filter(pedido -> esMismoDia(pedido.getHoraRecepcion(),fechaReferencia)).collect(Collectors.toList());
+    }
+
+    private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
+        return fecha1.getYear() == fecha2.getYear() &&
+                fecha1.getDayOfYear() == fecha2.getDayOfYear();
+    }
 
     @Override
     public List<Pedido> cargarPedidos(InputStream inputStream) {

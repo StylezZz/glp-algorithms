@@ -2,9 +2,11 @@ package com.glp.glpDP1.algorithm;
 
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
+import com.glp.glpDP1.services.impl.MonitoreoService;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.management.monitor.Monitor;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -29,6 +31,18 @@ public class AlgoritmoGenetico {
     // Resultados
     private List<Ruta> mejorSolucion;
     private double mejorFitness;
+
+    private MonitoreoService monitoreoService;
+    private Map<String, List<Ubicacion>> rutasEnProgreso = new HashMap<>();
+    private Map<String, List<Bloqueo>> bloqueosActivos = new HashMap<>();
+
+    public void setMonitoreoService(MonitoreoService monitoreoService) {
+        this.monitoreoService = monitoreoService;
+    }
+
+    private MonitoreoService getMonitoreoService() {
+        return monitoreoService;
+    }
 
     /**
      * Constructor con parámetros predeterminados
@@ -68,6 +82,14 @@ public class AlgoritmoGenetico {
         this.pedidosPendientes = preprocesarPedidos(pedidos); // Usar preprocesamiento
         this.mapa = mapa;
         this.momentoActual = momento;
+
+        List<Bloqueo> bloqueos = mapa.getBloqueos().stream()
+                .filter(b -> esBloqueoDuranteEjecucion(b, momento))
+                .collect(Collectors.toList());
+
+        if (monitoreoService != null) {
+            monitoreoService.actualizarBloqueos(bloqueos);
+        }
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -155,8 +177,25 @@ public class AlgoritmoGenetico {
             }
         }
 
+        if(mejorSolucion!=null && monitoreoService!=null){
+            for(Ruta ruta:mejorSolucion){
+                ruta.setMonitoreoService(monitoreoService);
+                ruta.actualizarEstadoMonitoreo(ruta.getOrigen(),momentoActual);
+            }
+        }
+
         // Retornar la mejor solución encontrada
-        return mejorSolucion;
+        return mejorSolucion!=null ? mejorSolucion : new ArrayList<>();
+    }
+
+    // Método para verificar si un bloqueo estará activo durante la ejecución
+    private boolean esBloqueoDuranteEjecucion(Bloqueo bloqueo, LocalDateTime momento) {
+        // Considerar un período de 24 horas desde el momento actual
+        LocalDateTime finPeriodo = momento.plusHours(24);
+
+        return (bloqueo.getHoraFin().isAfter(momento) &&
+                (bloqueo.getHoraInicio().isBefore(finPeriodo) ||
+                        bloqueo.getHoraInicio().isEqual(finPeriodo)));
     }
 
     private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales){
@@ -460,6 +499,12 @@ public class AlgoritmoGenetico {
             // Optimizar el orden de cada ruta
             for (Ruta ruta : rutasPorCamion.values()) {
                 ruta.optimizarSecuencia();
+            }
+
+            if(monitoreoService!=null){
+                for(Ruta ruta:rutasPorCamion.values()){
+                    rutasEnProgreso.put(ruta.getId(),new ArrayList<>(ruta.getSecuenciaNodos()));
+                }
             }
 
             return new ArrayList<>(rutasPorCamion.values());
