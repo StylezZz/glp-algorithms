@@ -82,15 +82,11 @@ public class AcoServiceImpl implements ACOService {
         // Ejecutar el algoritmo de forma asíncrona
         Future<?> tarea = executor.submit(() -> {
             try {
-                // Actualizar estado a EN_EJECUCION
                 estado.put("estado", "EN_EJECUCION");
-
-                // Medir tiempo de inicio
-                LocalDateTime horaInicio = LocalDateTime.now();
+                LocalDateTime horaInicioEjecucion = LocalDateTime.now();
 
                 // Inicializar el algoritmo ACO con los parámetros proporcionados
                 AlgoritmoACO algoritmo;
-
                 // Configurar parámetros si se proporcionaron
                 if (numHormigas != null && numIteraciones != null &&
                         alfa != null && beta != null && rho != null && q0 != null) {
@@ -107,7 +103,6 @@ public class AcoServiceImpl implements ACOService {
                     // Usar parámetros por defecto
                     algoritmo = new AlgoritmoACO();
                 }
-
                 // Ejecutar optimización
                 List<Ruta> rutas = algoritmo.optimizarRutas(
                         camiones,
@@ -115,20 +110,10 @@ public class AcoServiceImpl implements ACOService {
                         mapa,
                         momento
                 );
-
                 double fitness = algoritmo.getMejorFitness();
 
-                // Simular progreso (en un caso real, esto vendría del algoritmo)
-                for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
-                    estado.put("progreso", i);
-                    estado.put("horaUltimaActualizacion", LocalDateTime.now());
-                    estado.put("mejorFitness", algoritmo.getMejorFitness());
-                    Thread.sleep(50); // Simular tiempo de ejecución
-                }
-
-                // Medir tiempo de fin
-                LocalDateTime horaFin = LocalDateTime.now();
-                Duration tiempoEjecucion = Duration.between(horaInicio, horaFin);
+                LocalDateTime horaFinEjecucion = LocalDateTime.now();
+                Duration tiempoEjecucion = Duration.between(horaInicioEjecucion, horaFinEjecucion);
 
                 // Calcular métricas adicionales
                 double distanciaTotal = calcularDistanciaTotal(rutas);
@@ -145,8 +130,8 @@ public class AcoServiceImpl implements ACOService {
                 resultado.put("pedidosEntregados", pedidosEntregados);
                 resultado.put("pedidosTotales", pedidos.size());
                 resultado.put("tipoAlgoritmo", "ACO");
-                resultado.put("horaInicio", horaInicio);
-                resultado.put("horaFin", horaFin);
+                resultado.put("horaInicio", horaInicioEjecucion);
+                resultado.put("horaFin", horaFinEjecucion);
                 resultado.put("tiempoEjecucion", tiempoEjecucion);
 
                 // Métricas adicionales
@@ -163,7 +148,7 @@ public class AcoServiceImpl implements ACOService {
                 // Actualizar estado a COMPLETADO
                 estado.put("estado", "COMPLETADO");
                 estado.put("progreso", 100);
-                estado.put("horaUltimaActualizacion", horaFin);
+                estado.put("horaUltimaActualizacion", horaFinEjecucion);
                 estado.put("mejorFitness", fitness);
 
                 log.info("Algoritmo ACO completado para ID {}, fitness: {}", id, fitness);

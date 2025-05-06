@@ -1,6 +1,7 @@
 package com.glp.glpDP1.domain;
 
 import com.glp.glpDP1.domain.enums.TipoAlmacen;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +15,19 @@ public class Mapa {
     private final int alto;       // Dimensión en el eje Y (km)
     private final List<Bloqueo> bloqueos;
     private final List<Almacen> almacenes;
+
+    // Cache simple
+    private final Map<String, CachedRoute> routeCache = new HashMap<>();
+
+    private static class CachedRoute {
+        final List<Ubicacion> ruta;
+        final LocalDateTime timestamp;
+
+        CachedRoute(List<Ubicacion> ruta, LocalDateTime timestamp) {
+            this.ruta = new ArrayList<>(ruta);
+            this.timestamp = timestamp;
+        }
+    }
 
     // Constructor por defecto, usa los valores del enunciado
     public Mapa() {
@@ -30,6 +44,13 @@ public class Mapa {
         inicializarAlmacenes();
     }
 
+    public void setBloqueos(List<Bloqueo> bloqueos) {
+        this.bloqueos.clear();
+        this.bloqueos.addAll(bloqueos);
+        // Limpiar cache al cambiar bloqueos
+        routeCache.clear();
+    }
+
     private void inicializarAlmacenes() {
         // Almacén central: posición X=12, Y=8
         almacenes.add(new Almacen("CENTRAL", new Ubicacion(12, 8),
@@ -44,21 +65,8 @@ public class Mapa {
                 TipoAlmacen.INTERMEDIO, 160.0));
     }
 
-    public List<Bloqueo> getBloqueos() {
-        return new ArrayList<>(bloqueos);
-    }
-
-    public void setBloqueos(List<Bloqueo> bloqueos) {
-        this.bloqueos.clear();
-        this.bloqueos.addAll(bloqueos);
-    }
-
     public void agregarBloqueo(Bloqueo bloqueo) {
         bloqueos.add(bloqueo);
-    }
-
-    public List<Almacen> getAlmacenes() {
-        return new ArrayList<>(almacenes);
     }
 
     /**
@@ -252,6 +260,41 @@ public class Mapa {
      * @return Lista de ubicaciones que forman la ruta, o lista vacía si no hay ruta posible
      */
     public List<Ubicacion> encontrarRutaConTiempo(Ubicacion origen, Ubicacion destino,
+                                                  LocalDateTime momentoInicio, double velocidadKmH) {
+
+        // Key basada SOLO en posición y momento de SIMULACIÓN
+        String key = String.format("%d,%d->%d,%d@%02d:%02d",
+                origen.getX(), origen.getY(),
+                destino.getX(), destino.getY(),
+                momentoInicio.getHour(), momentoInicio.getMinute());
+
+        CachedRoute cached = routeCache.get(key);
+        if (cached != null) {
+            // Si dos hormigas consultan EXACTAMENTE la misma ruta
+            // en el MISMO momento de simulación, usan cache
+            return new ArrayList<>(cached.ruta);
+        }
+
+        // Calcular con A*
+        List<Ubicacion> ruta = encontrarRutaOriginal(origen, destino, momentoInicio, velocidadKmH);
+
+        // Guardar en cache
+        if (!ruta.isEmpty()) {
+            routeCache.put(key, new CachedRoute(ruta, momentoInicio));
+        }
+
+        return ruta;
+    }
+
+    /**
+     * Encuentra la ruta más corta considerando bloqueos en los tiempos futuros de llegada
+     * @param origen Ubicación de origen
+     * @param destino Ubicación de destino
+     * @param momentoInicio Momento de inicio del recorrido
+     * @param velocidadKmH Velocidad del camión en km/h
+     * @return Lista de ubicaciones que forman la ruta, o lista vacía si no hay ruta posible
+     */
+    private List<Ubicacion> encontrarRutaOriginal(Ubicacion origen, Ubicacion destino,
                                                   LocalDateTime momentoInicio, double velocidadKmH) {
         // Si origen y destino son iguales, la ruta es el propio punto
         if (origen.equals(destino)) {
