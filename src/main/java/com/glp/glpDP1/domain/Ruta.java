@@ -14,7 +14,10 @@ import java.util.*;
 public class Ruta {
     private final String id;
     private final String codigoCamion;
-    private List<Ubicacion> secuenciaNodos;
+
+    private List<Ubicacion> secuenciaNodos; // Todos los nodos del camino
+    private List<Ubicacion> secuenciaParadas; // Solo nodos de parada (inicio, fin, entregas, recargas)
+
     private List<Pedido> pedidosAsignados;
     private Ubicacion origen;
     private Ubicacion destino;
@@ -27,6 +30,7 @@ public class Ruta {
     private boolean cancelada;
     private List<EventoRuta> eventos;
     private boolean requiereReabastecimiento;
+    private boolean factibilidadEncontrada;
 
     private MonitoreoService monitoreoService;
 
@@ -35,6 +39,7 @@ public class Ruta {
         this.codigoCamion = codigoCamion;
         this.origen = origen;
         this.secuenciaNodos = new ArrayList<>();
+        this.secuenciaParadas = new ArrayList<>();
         this.pedidosAsignados = new ArrayList<>();
         this.distanciaTotal = 0;
         this.consumoCombustible = 0;
@@ -42,27 +47,6 @@ public class Ruta {
         this.cancelada = false;
         this.eventos = new ArrayList<>();
         this.requiereReabastecimiento = false;  // NUEVO: Inicializar a false
-    }
-
-    public List<Ubicacion> getSecuenciaNodos() {
-        return new ArrayList<>(secuenciaNodos);
-    }
-
-    public void setSecuenciaNodos(List<Ubicacion> secuenciaNodos) {
-        this.secuenciaNodos = new ArrayList<>(secuenciaNodos);
-        calcularDistanciaTotal();
-    }
-
-    public List<Pedido> getPedidosAsignados() {
-        return new ArrayList<>(pedidosAsignados);
-    }
-
-    public void setPedidosAsignados(List<Pedido> pedidosAsignados) {
-        this.pedidosAsignados = new ArrayList<>(pedidosAsignados);
-    }
-
-    public List<EventoRuta> getEventos() {
-        return new ArrayList<>(eventos);
     }
 
     /**
@@ -74,10 +58,9 @@ public class Ruta {
             pedidosAsignados.add(pedido);
             pedido.setCamionAsignado(codigoCamion);
 
-            // Añadir el nodo del pedido a la secuencia si no existe
-            if (!secuenciaNodos.contains(pedido.getUbicacion())) {
-                secuenciaNodos.add(pedido.getUbicacion());
-                calcularDistanciaTotal();
+            // Añadir el nodo del pedido a los puntos de PARADA
+            if (!secuenciaParadas.contains(pedido.getUbicacion())) {
+                secuenciaParadas.add(pedido.getUbicacion());
             }
         }
     }
@@ -100,7 +83,7 @@ public class Ruta {
             pedidosAsignados.remove(pedidoAEliminar);
             pedidoAEliminar.setCamionAsignado(null);
 
-            // Verificar si hay que eliminar el nodo
+            // MODIFICADO: verificar si hay que eliminar de PARADAS
             boolean hayOtroPedidoEnMismoNodo = false;
             Ubicacion ubicacionPedido = pedidoAEliminar.getUbicacion();
 
@@ -112,8 +95,7 @@ public class Ruta {
             }
 
             if (!hayOtroPedidoEnMismoNodo) {
-                secuenciaNodos.remove(ubicacionPedido);
-                calcularDistanciaTotal();
+                secuenciaParadas.remove(ubicacionPedido);
             }
 
             return true;
@@ -214,72 +196,94 @@ public class Ruta {
         eventos.add(evento);
     }
 
+
+
     /**
      * Optimiza la secuencia de nodos para minimizar la distancia total
      * considerando los bloqueos en el mapa
      * @param mapa Mapa con la información de bloqueos
      * @param momento Momento actual para verificar bloqueos
      */
-    public void optimizarSecuenciaConBloqueos(Mapa mapa, LocalDateTime momento) {
-        if (secuenciaNodos.size() <= 1) {
-            return;
-        }
+    public void  optimizarSecuenciaConBloqueos(Mapa mapa,
+                                               LocalDateTime momento,
+                                               Camion camion) {
+        if (secuenciaParadas.size() <= 1) return;
 
-        List<Ubicacion> nuevaSecuencia = new ArrayList<>();
-        List<Ubicacion> pendientes = new ArrayList<>(secuenciaNodos);
+        List<Ubicacion> nuevaSecuenciaParadas = new ArrayList<>();
+        List<Ubicacion> todosLosNodos = new ArrayList<>();
+        todosLosNodos.add(origen);
 
         Ubicacion actual = origen;
         LocalDateTime tiempoActual = momento;
+        double combustibleActual = camion.getNivelCombustibleActual();
 
-        while (!pendientes.isEmpty()) {
-            // Encontrar la mejor ruta al siguiente punto considerando bloqueos
-            Ubicacion mejorSiguiente = null;
-            List<Ubicacion> mejorRuta = null;
-            LocalDateTime mejorTiempoLlegada = null;
+        for (Ubicacion siguiente : secuenciaParadas) {
+            // Calcular ruta A*
+            List<Ubicacion> rutaDetallada = mapa.encontrarRutaConTiempo(
+                    actual, siguiente, tiempoActual, camion.getVelocidadPromedio());
 
-            for (Ubicacion destino : pendientes) {
-                // Calcular tiempo para llegar al destino
-                int distanciaDirecta = actual.distanciaA(destino);
-                long segundosViaje = (long) (distanciaDirecta / 50.0 * 3600); // 50 km/h
-                LocalDateTime tiempoEstimadoLlegada = tiempoActual.plusSeconds(segundosViaje);
-
-                // Usar A* para encontrar la ruta óptima evitando bloqueos activos en el momento de llegada
-                List<Ubicacion> ruta = mapa.encontrarRutaConTiempo(actual, destino, tiempoActual, 50.0);
-
-                // Si no hay ruta posible por bloqueos, intentar con el siguiente destino
-                if (ruta.isEmpty()) continue;
-
-                // Calcular distancia real de la ruta (suma de tramos)
-                int distanciaRuta = calcularDistanciaRuta(ruta);
-
-                // Actualizar si es la mejor opción encontrada hasta ahora
-                if (mejorRuta == null || distanciaRuta < calcularDistanciaRuta(mejorRuta)) {
-                    mejorSiguiente = destino;
-                    mejorRuta = ruta;
-
-                    // Calcular tiempo de llegada para esta ruta
-                    long segundosRuta = (long) (distanciaRuta / 50.0 * 3600);
-                    mejorTiempoLlegada = tiempoActual.plusSeconds(segundosRuta);
-                }
+            if (rutaDetallada.isEmpty()) {
+                // No hay ruta posible
+                this.factibilidadEncontrada = false;
+                return;
             }
 
-            // Si no se encontró ninguna ruta viable, salir
-            if (mejorSiguiente == null) break;
+            int distanciaTotal = calcularDistanciaRuta(rutaDetallada);
+            double consumoNecesario = camion.calcularConsumoCombustible(distanciaTotal);
 
-            // Agregar el mejor destino a la secuencia
-            nuevaSecuencia.add(mejorSiguiente);
-            pendientes.remove(mejorSiguiente);
-            actual = mejorSiguiente;
-            tiempoActual = mejorTiempoLlegada; // Actualizar el tiempo actual
+            // VERIFICAR COMBUSTIBLE ANTES DE COMPROMETERSE
+            if (combustibleActual < consumoNecesario) {
+                // Encontrar almacén más cercano
+                Almacen almacenCercano = mapa.obtenerAlmacenMasCercano(actual);
+
+                // Ruta a almacén + almacén a siguiente destino
+                List<Ubicacion> rutaAlAlmacen = mapa.encontrarRutaConTiempo(
+                        actual, almacenCercano.getUbicacion(), tiempoActual, camion.getVelocidadPromedio());
+
+                if (rutaAlAlmacen.isEmpty()) {
+                    this.factibilidadEncontrada = false;
+                    return;
+                }
+
+                // Añadir parada en almacén
+                nuevaSecuenciaParadas.add(almacenCercano.getUbicacion());
+                todosLosNodos.addAll(rutaAlAlmacen);
+
+                // Actualizar posición y combustible
+                actual = almacenCercano.getUbicacion();
+                combustibleActual = camion.getCapacidadTanqueCombustible();
+
+                // Recalcular ruta desde almacén
+                rutaDetallada = mapa.encontrarRutaConTiempo(
+                        actual, siguiente, tiempoActual, camion.getVelocidadPromedio());
+            }
+
+            // Añadir destino original a la ruta
+            nuevaSecuenciaParadas.add(siguiente);
+            todosLosNodos.addAll(rutaDetallada);
+
+            // Actualizar estado para siguiente iteración
+            combustibleActual -= consumoNecesario;
+            actual = siguiente;
+            tiempoActual = calcularTiempoLlegada(rutaDetallada, tiempoActual, camion);
         }
 
-        // Actualizar la secuencia de nodos
-        this.secuenciaNodos = nuevaSecuencia;
+        this.secuenciaParadas = nuevaSecuenciaParadas;
+        this.secuenciaNodos = todosLosNodos;
         calcularDistanciaTotal();
+    }
 
-        if(monitoreoService!=null){
-            actualizarEstadoMonitoreo(origen, momento);
-        }
+    /**
+     * Calcula el tiempo de llegada siguiendo una ruta específica
+     */
+    private LocalDateTime calcularTiempoLlegada(List<Ubicacion> ruta,
+                                                LocalDateTime tiempoInicio,
+                                                Camion camion) {
+        int distanciaTotal = calcularDistanciaRuta(ruta);
+        double horasViaje = distanciaTotal / camion.getVelocidadPromedio();
+        long minutosViaje = Math.round(horasViaje * 60);
+
+        return tiempoInicio.plusMinutes(minutosViaje);
     }
 
     public void actualizarEstadoMonitoreo(Ubicacion posicionActual, LocalDateTime momento) {
@@ -426,13 +430,13 @@ public class Ruta {
      * Optimiza la secuencia de nodos para minimizar la distancia total
      */
     public void optimizarSecuencia() {
-        // Implementación simple de optimización (nearest neighbor)
-        if (secuenciaNodos.size() <= 1) {
+        // Optimizar la secuencia de PARADAS
+        if (secuenciaParadas.size() <= 1) {
             return;
         }
 
-        List<Ubicacion> nuevaSecuencia = new ArrayList<>();
-        List<Ubicacion> pendientes = new ArrayList<>(secuenciaNodos);
+        List<Ubicacion> nuevaSecuenciaParadas = new ArrayList<>();
+        List<Ubicacion> pendientes = new ArrayList<>(secuenciaParadas);
 
         Ubicacion actual = origen;
         while (!pendientes.isEmpty()) {
@@ -447,12 +451,17 @@ public class Ruta {
                 }
             }
 
-            nuevaSecuencia.add(masProxima);
+            nuevaSecuenciaParadas.add(masProxima);
             pendientes.remove(masProxima);
             actual = masProxima;
         }
 
-        this.secuenciaNodos = nuevaSecuencia;
+        this.secuenciaParadas = nuevaSecuenciaParadas;
+
+        // NUEVO: también actualizar la secuencia completa de nodos
+        this.secuenciaNodos = new ArrayList<>(secuenciaParadas);
+        this.secuenciaNodos.add(0, origen);
+
         calcularDistanciaTotal();
     }
 
@@ -460,7 +469,7 @@ public class Ruta {
         // Primero optimizar la secuencia base
         optimizarSecuencia();
 
-        List<Ubicacion> nuevaSecuencia = new ArrayList<>();
+        List<Ubicacion> nuevaSecuenciaParadas = new ArrayList<>();
         List<Almacen> almacenes = mapa.getAlmacenes();
 
         // MODIFICADO: Obtener almacén central (para priorizar)
@@ -473,10 +482,11 @@ public class Ruta {
 
         boolean necesitaRecargaGLP = glpTotal > camion.getCapacidadTanqueGLP();
 
-        if(necesitaRecargaGLP && !secuenciaNodos.contains(almacenCentral.getUbicacion())){
-            int puntoMedio = secuenciaNodos.size() / 2;
-            if(puntoMedio > 0 && puntoMedio<secuenciaNodos.size()){
-                secuenciaNodos.add(puntoMedio,almacenCentral.getUbicacion());
+        // MODIFICADO: trabajar con secuenciaParadas
+        if(necesitaRecargaGLP && !secuenciaParadas.contains(almacenCentral.getUbicacion())){
+            int puntoMedio = secuenciaParadas.size() / 2;
+            if(puntoMedio > 0 && puntoMedio < secuenciaParadas.size()){
+                secuenciaParadas.add(puntoMedio, almacenCentral.getUbicacion());
                 // Registrar el evento de recarga de GLP
                 registrarEvento(
                         EventoRuta.TipoEvento.RECARGA_GLP,
@@ -487,7 +497,7 @@ public class Ruta {
             }
         }
 
-        for (Ubicacion siguiente : secuenciaNodos) {
+        for (Ubicacion siguiente : secuenciaParadas) {
             int distanciaAlSiguiente = actual.distanciaA(siguiente);
 
             // Verificar si tenemos suficiente combustible para llegar al siguiente punto y regresar al almacén
@@ -516,7 +526,7 @@ public class Ruta {
                 }
 
                 // Añadir desvío al almacén para recargar
-                nuevaSecuencia.add(almacenParaRecargar.getUbicacion());
+                nuevaSecuenciaParadas.add(almacenParaRecargar.getUbicacion());
 
                 // Registrar el evento de recarga
                 registrarEvento(
@@ -535,18 +545,20 @@ public class Ruta {
                 consumoHastaSiguiente = camion.calcularConsumoCombustible(distanciaAlSiguiente);
             }
 
-            // Añadir el punto a la secuencia
-            nuevaSecuencia.add(siguiente);
+            // Añadir el punto a la secuencia de PARADAS
+            nuevaSecuenciaParadas.add(siguiente);
 
             // Actualizar combustible y posición actual
             combustibleActual -= consumoHastaSiguiente;
             actual = siguiente;
         }
 
-        // Actualizar la secuencia con las recargas
-        this.secuenciaNodos = nuevaSecuencia;
+        // Actualizar la secuencia de paradas con las recargas
+        this.secuenciaParadas = nuevaSecuenciaParadas;
         calcularDistanciaTotal();
     }
+
+
     @Override
     public String toString() {
         return "Ruta{" +

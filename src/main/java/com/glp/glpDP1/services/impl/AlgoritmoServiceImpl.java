@@ -259,15 +259,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                     );
 
                     fitness = algoritmo.getMejorFitness();
-
-                    // Actualizar progreso durante la ejecución
-                    for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
-                        estado.setProgreso(i);
-                        estado.setHoraUltimaActualizacion(LocalDateTime.now());
-                        estado.setMejorFitness(algoritmo.getMejorFitness());
-                        Thread.sleep(50); // Simular tiempo de ejecución
-                    }
-
                 } else {
                     throw new IllegalArgumentException("Tipo de algoritmo no soportado: " + tipoAlgoritmo);
                 }
