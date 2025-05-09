@@ -48,7 +48,7 @@ public class AlgoritmoGenetico {
      * Constructor con parámetros predeterminados
      */
     public AlgoritmoGenetico() {
-        this(100, 50, 0.05, 0.7, 5);
+        this(150, 100, 0.08, 0.8, 10);
     }
 
     /**
@@ -352,10 +352,10 @@ public class AlgoritmoGenetico {
         }
 
         // Calcular fitness final (ponderado)
-        double fitness = 0.15 * consumoTotal +
-                0.10 * distanciaTotal +
-                0.20 * retrasosTotal +
-                0.50 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+        double fitness = 0.10 * consumoTotal +
+                0.05 * distanciaTotal +
+                0.15 * retrasosTotal +
+                0.65 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
                 0.05 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
 
         individuo.setFitness(fitness);
