@@ -12,7 +12,6 @@ import com.glp.glpDP1.repository.DataRepository;
 import com.glp.glpDP1.services.AlgoritmoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -401,7 +400,21 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
     }
 
     private double calcularConsumoCombustible(List<Ruta> rutas) {
-        return rutas.stream().mapToDouble(Ruta::getConsumoCombustible).sum();
+        double totalConsumo = 0.0;
+        for(Ruta ruta:rutas){
+            totalConsumo += ruta.getConsumoCombustible();
+            if(ruta.getConsumoCombustible()<=0 && ruta.getDistanciaTotal()>0){
+                for(Camion camion: dataRepository.obtenerCamiones()){
+                    if(camion.getCodigo().equals(ruta.getCodigoCamion())){
+                        double consumo = ruta.calcularConsumoCombustible(camion);
+                        ruta.setConsumoCombustible(consumo);
+                        totalConsumo += consumo;
+                        break;
+                    }
+                }
+            }
+        }
+        return totalConsumo;
     }
 
     private int calcularPedidosEntregados(List<Ruta> rutas) {

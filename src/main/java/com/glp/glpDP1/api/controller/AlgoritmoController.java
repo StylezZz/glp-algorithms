@@ -7,11 +7,13 @@ import com.glp.glpDP1.domain.Camion;
 import com.glp.glpDP1.domain.Mapa;
 import com.glp.glpDP1.domain.Pedido;
 import com.glp.glpDP1.domain.Ruta;
+import com.glp.glpDP1.domain.SimuladorEntregas;
 import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.AlgoritmoService;
 import com.glp.glpDP1.services.impl.AlgoritmoServiceImpl;
 import com.glp.glpDP1.services.impl.AnalisisPedidosService;
+import com.glp.glpDP1.services.impl.AveriaService;
 import com.glp.glpDP1.services.impl.OptimizacionMultipleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -39,6 +40,9 @@ public class AlgoritmoController {
     @Autowired
     private DataRepositoryImpl dataRepositoryImpl;
 
+    @Autowired
+    private AveriaService averiaService;
+
     @PostMapping("/start-multiple")
     public ResponseEntity<Map<String, Object>> iniciarMultiple(
             @RequestBody AlgoritmoSimpleRequest request,
@@ -51,8 +55,8 @@ public class AlgoritmoController {
             Mapa mapa = dataRepositoryImpl.obtenerMapa();
 
             // Si no se especificó momento actual, usar el actual
-            LocalDateTime momentoActual = request.getMomentoActual() != null ?
-                    request.getMomentoActual() : LocalDateTime.now();
+            LocalDateTime momentoActual = request.getMomentoActual() != null ? request.getMomentoActual()
+                    : LocalDateTime.now();
 
             // Convertir escenario
             EscenarioSimulacion escenario = null;
@@ -71,12 +75,10 @@ public class AlgoritmoController {
 
             if ("GENETICO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
                 resultado = optimizacionMultipleService.ejecutarMultipleGenetico(
-                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones
-                );
+                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones);
             } else {
                 resultado = optimizacionMultipleService.ejecutarMultiplePSO(
-                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones
-                );
+                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones);
             }
 
             // Iniciar algoritmo con la mejor solución
@@ -89,8 +91,7 @@ public class AlgoritmoController {
                     100.0,
                     LocalDateTime.now(),
                     LocalDateTime.now(),
-                    resultado.fitness
-            );
+                    resultado.fitness);
 
             // Calcular métricas
             double distanciaTotal = resultado.rutas.stream()
@@ -122,6 +123,7 @@ public class AlgoritmoController {
     /**
      * Inicia una nueva ejecución del algoritmo de optimización
      * usando los datos ya cargados en el sistema
+     * 
      * @param request Parámetros de ejecución
      * @return ID de la ejecución
      */
@@ -144,6 +146,7 @@ public class AlgoritmoController {
 
     /**
      * Consulta el estado actual de la ejecución de un algoritmo
+     * 
      * @param id ID de la ejecución
      * @return Estado actual
      */
@@ -163,6 +166,7 @@ public class AlgoritmoController {
 
     /**
      * Obtiene los resultados de una ejecución completada
+     * 
      * @param id ID de la ejecución
      * @return Resultados de la optimización
      */
@@ -185,6 +189,7 @@ public class AlgoritmoController {
 
     /**
      * Cancela una ejecución en curso
+     * 
      * @param id ID de la ejecución
      * @return Resultado de la cancelación
      */
@@ -205,17 +210,17 @@ public class AlgoritmoController {
         try {
             // Establecer parámetros optimizados
             if ("GENETICO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
-                request.setTamañoPoblacion(250);     // Aumentado de 100
-                request.setNumGeneraciones(150);     // Aumentado de 50
-                request.setTasaMutacion(0.15);       // Ajustado de 0.05
-                request.setTasaCruce(0.85);          // Ajustado de 0.7
-                request.setElitismo(15);             // Aumentado de 5
+                request.setTamañoPoblacion(250); // Aumentado de 100
+                request.setNumGeneraciones(150); // Aumentado de 50
+                request.setTasaMutacion(0.15); // Ajustado de 0.05
+                request.setTasaCruce(0.85); // Ajustado de 0.7
+                request.setElitismo(15); // Aumentado de 5
             } else if ("PSO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
-                request.setNumParticulas(100);       // Aumentado de 50
-                request.setNumIteraciones(200);      // Aumentado de 100
-                request.setW(0.6);                   // Ajustado de 0.7
-                request.setC1(1.8);                  // Ajustado de 1.5
-                request.setC2(1.8);                  // Ajustado de 1.5
+                request.setNumParticulas(100); // Aumentado de 50
+                request.setNumIteraciones(200); // Aumentado de 100
+                request.setW(0.6); // Ajustado de 0.7
+                request.setC1(1.8); // Ajustado de 1.5
+                request.setC2(1.8); // Ajustado de 1.5
             }
 
             // Iniciar algoritmo con parámetros optimizados
@@ -268,7 +273,7 @@ public class AlgoritmoController {
     public ResponseEntity<String> iniciarAlgoritmoDiario(@RequestBody AlgoritmoSimpleRequest request) {
         try {
             log.info("Iniciando algoritmo diario tipo {}", request.getTipoAlgoritmo());
-            String id = ((AlgoritmoServiceImpl)algoritmoService).iniciarAlgoritmoDiario(request);
+            String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoDiario(request);
             return ResponseEntity.ok(id);
         } catch (IllegalStateException e) {
             log.warn("No hay pedidos para hoy: {}", e.getMessage());
@@ -283,7 +288,7 @@ public class AlgoritmoController {
     public ResponseEntity<String> iniciarAlgoritmoGeneticoDiario(@RequestBody AlgoritmoSimpleRequest request) {
         try {
             log.info("Iniciando algoritmo genético diario");
-            String id = ((AlgoritmoServiceImpl)algoritmoService).iniciarAlgoritmoGeneticoDiario(request);
+            String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoGeneticoDiario(request);
             return ResponseEntity.ok(id);
         } catch (IllegalStateException e) {
             log.warn("No hay pedidos para hoy: {}", e.getMessage());
@@ -328,12 +333,58 @@ public class AlgoritmoController {
             datosSimulacion.put("entregasATiempo", entregasATiempo);
             datosSimulacion.put("entregasRetrasadas", entregasRetrasadas);
             datosSimulacion.put("porcentajeCumplimiento",
-                    entregasTotales > 0 ? (double)entregasATiempo / entregasTotales * 100 : 0);
+                    entregasTotales > 0 ? (double) entregasATiempo / entregasTotales * 100 : 0);
 
             return ResponseEntity.ok(datosSimulacion);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al obtener resultados de simulación", e);
+        }
+    }
+
+    // Añadir este método en la clase AlgoritmoController
+    @PostMapping("/simulate-with-failures/{id}")
+    public ResponseEntity<Map<String, Object>> simularConAverias(@PathVariable String id) {
+        try {
+            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
+            List<Camion> camiones = dataRepositoryImpl.obtenerCamiones();
+            Mapa mapa = dataRepositoryImpl.obtenerMapa();
+
+            // Crear simulador con servicio de averías
+            SimuladorEntregas simulador = new SimuladorEntregas(averiaService);
+
+            // Simular con averías
+            List<Ruta> rutasSimuladas = simulador.simularEntregas(
+                    resultado.getRutas(),
+                    LocalDateTime.now(),
+                    mapa,
+                    true // considerar averías
+            );
+
+            // Calcular métricas
+            int totalPedidos = resultado.getPedidosTotales();
+            int entregados = 0;
+            int cancelados = 0;
+
+            for (Ruta ruta : rutasSimuladas) {
+                if (ruta.isCompletada()) {
+                    entregados += ruta.getPedidosAsignados().size();
+                } else if (ruta.isCancelada()) {
+                    cancelados++;
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("rutasSimuladas", rutasSimuladas);
+            response.put("pedidosEntregados", entregados);
+            response.put("pedidosTotales", totalPedidos);
+            response.put("rutasCanceladas", cancelados);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error al simular con averías: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error en simulación con averías", e);
         }
     }
 }
