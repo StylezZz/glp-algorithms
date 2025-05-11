@@ -16,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -132,15 +133,17 @@ public class InitServiceImpl implements InitService {
                     if (parts.length == 2) {
                         String fechaStr = parts[0];
                         String codigoCamion = parts[1];
-
-                        // Convertir fecha
+                        System.out.println("Fecha: " + fechaStr + " Camion: " + codigoCamion);
+                        
+                        // Modificado: Primero parsear a LocalDate y luego convertir a LocalDateTime
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-                        LocalDateTime fecha = LocalDateTime.parse(fechaStr, formatter).withHour(0).withMinute(0);
+                        LocalDate fecha = LocalDate.parse(fechaStr, formatter);
+                        LocalDateTime fechaDateTime = fecha.atStartOfDay();
 
                         // Buscar camión y programar mantenimiento
                         Camion camion = dataRepository.buscarCamion(codigoCamion);
                         if (camion != null) {
-                            camion.setFechaProximoMantenimiento(fecha);
+                            camion.setFechaProximoMantenimiento(fechaDateTime);
                             count++;
                         } else {
                             log.warn("Camión no encontrado para mantenimiento: {}", codigoCamion);

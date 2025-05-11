@@ -150,19 +150,20 @@ public class Ruta {
     public double calcularConsumoCombustible(Camion camion) {
         double consumo = 0;
         double pesoActual = camion.calcularPesoTotal();
-
+    
         if (secuenciaNodos.isEmpty()) {
+            this.consumoCombustible = 0;
             return 0;
         }
-
+    
         // Tramo inicial: origen a primer nodo
         consumo += (origen.distanciaA(secuenciaNodos.get(0)) * pesoActual) / 180.0;
-
+    
         // Tramos intermedios
         for (int i = 0; i < secuenciaNodos.size() - 1; i++) {
             Ubicacion actual = secuenciaNodos.get(i);
             Ubicacion siguiente = secuenciaNodos.get(i + 1);
-
+    
             // Reducir peso después de cada entrega (aproximación)
             if (i < pedidosAsignados.size()) {
                 pesoActual -= pedidosAsignados.get(i).getCantidadGLP() * 0.5; // 0.5 ton/m3
@@ -170,15 +171,16 @@ public class Ruta {
                     pesoActual = camion.getPesoTara();
                 }
             }
-
+    
             consumo += (actual.distanciaA(siguiente) * pesoActual) / 180.0;
         }
-
+    
         // Tramo final: último nodo a destino
         if (destino != null && !secuenciaNodos.isEmpty()) {
             consumo += (secuenciaNodos.get(secuenciaNodos.size() - 1).distanciaA(destino) * camion.getPesoTara()) / 180.0;
         }
-
+    
+        // IMPORTANTE: Actualizar el valor del consumo en el objeto
         this.consumoCombustible = consumo;
         return consumo;
     }

@@ -297,13 +297,14 @@ public class AlgoritmoGenetico {
     private void calcularFitness(Individuo individuo) {
         // Decodificar la solución para obtener las rutas
         List<Ruta> rutas = individuo.decodificarSolucion();
-
+    
         double consumoTotal = 0.0;      // Consumo total de combustible
         double distanciaTotal = 0.0;    // Distancia total recorrida
         double retrasosTotal = 0.0;     // Suma de retrasos (en minutos)
         double pedidosNoAsignados = 0;  // Número de pedidos sin asignar
         double sobrecargaTotal = 0.0;   // Suma de sobrecargas de GLP en camiones
-
+        double riesgoAverias = 0.0;     // Riesgo de averías basado en la distancia
+    
         // Evaluar cada ruta
         for (Ruta ruta : rutas) {
             // Obtener el camión asignado a esta ruta
@@ -315,60 +316,76 @@ public class AlgoritmoGenetico {
                     break;
                 }
             }
-
+    
             if (camion == null) {
                 continue; // Esto no debería ocurrir
             }
-
+    
             // Calcular consumo de combustible
             double consumo = ruta.calcularConsumoCombustible(camion);
             consumoTotal += consumo;
             ruta.setConsumoCombustible(consumo);
-
+    
             // Sumar distancia total
             distanciaTotal += ruta.getDistanciaTotal();
-
+    
             // Verificar capacidad GLP
             double glpTotal = 0;
             for (Pedido p : ruta.getPedidosAsignados()) {
                 glpTotal += p.getCantidadGLP();
             }
-
+    
             if (glpTotal > camion.getCapacidadTanqueGLP()) {
                 sobrecargaTotal += (glpTotal - camion.getCapacidadTanqueGLP());
             }
-
+    
             // Calcular retrasos potenciales
             for (Pedido pedido : ruta.getPedidosAsignados()) {
                 // Estimar tiempo de entrega basado en distancia y velocidad
                 Ubicacion origen = camion.getUbicacionActual();
                 int distanciaAlPedido = origen.distanciaA(pedido.getUbicacion());
                 double horasViaje = distanciaAlPedido / 50.0; // 50 km/h velocidad promedio
-
+    
                 LocalDateTime entregaEstimada = momentoActual.plusMinutes((long)(horasViaje * 60));
-
+    
                 // Si entrega estimada es posterior a la hora límite, hay retraso
                 if (entregaEstimada.isAfter(pedido.getHoraLimiteEntrega())) {
                     Duration retraso = Duration.between(pedido.getHoraLimiteEntrega(), entregaEstimada);
                     retrasosTotal += retraso.toMinutes();
                 }
             }
+    
+            // Calcular riesgo de averías basado en distancia y tipo de camión
+            // Esto es una heurística simple: rutas más largas tienen mayor riesgo de averías
+            double factorRiesgo = 0.0;
+            
+            // Factores de riesgo según tipo de camión 
+            switch (camion.getTipo()) {
+                case TA: factorRiesgo = 0.5; break; // Menor riesgo
+                case TB: factorRiesgo = 0.6; break;
+                case TC: factorRiesgo = 0.7; break;
+                case TD: factorRiesgo = 0.8; break; // Mayor riesgo
+            }
+            
+            // El riesgo aumenta con la distancia y es influenciado por el tipo de camión
+            riesgoAverias += ruta.getDistanciaTotal() * factorRiesgo / 100; // Normalizado
         }
-
+    
         // Contar pedidos no asignados
         for (int i = 0; i < individuo.getGenes().size(); i++) {
             if (individuo.getGenes().get(i) == -1) {
                 pedidosNoAsignados++;
             }
         }
-
+    
         // Calcular fitness final (ponderado)
         double fitness = 0.10 * consumoTotal +
                 0.05 * distanciaTotal +
                 0.15 * retrasosTotal +
-                0.65 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
-                0.05 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
-
+                0.60 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+                0.05 * (sobrecargaTotal * 1000) +     // Penalización fuerte por sobrecarga
+                0.05 * riesgoAverias;                 // Penalización por riesgo de averías
+    
         individuo.setFitness(fitness);
     }
 
