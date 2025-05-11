@@ -9,11 +9,14 @@ public class EventoRuta {
     public enum TipoEvento {
         INICIO,
         ENTREGA,
-        RECARGA_GLP,
         RECARGA_COMBUSTIBLE,
-        AVERIA,
-        BLOQUEO,
-        FIN
+        RECARGA_GLP,
+        FIN,
+        MANTENIMIENTO,
+        AVERIA_TI1,         // Nueva: Avería tipo 1 (ej: llanta baja)
+        AVERIA_TI2,         // Nueva: Avería tipo 2 (ej: motor ahogado)
+        AVERIA_TI3,         // Nueva: Avería tipo 3 (ej: choque)
+        FIN_POR_AVERIA      // Nueva: Regreso al almacén por avería
     }
 
     private final TipoEvento tipo;

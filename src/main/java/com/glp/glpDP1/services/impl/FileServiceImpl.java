@@ -3,6 +3,8 @@ package com.glp.glpDP1.services.impl;
 import com.glp.glpDP1.domain.Bloqueo;
 import com.glp.glpDP1.domain.Pedido;
 import com.glp.glpDP1.domain.Ubicacion;
+import com.glp.glpDP1.domain.enums.TipoIncidente;
+import com.glp.glpDP1.domain.enums.Turno;
 import com.glp.glpDP1.repository.DataRepository;
 import com.glp.glpDP1.services.FileService;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,10 +31,16 @@ public class FileServiceImpl implements FileService {
     private static final Pattern FECHA_HORA_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m");
     private static final Pattern FECHA_HORA_RANGO_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m-(\\d+)d(\\d+)h(\\d+)m");
 
-    public List<Pedido> cargarPedidosPorDia(InputStream inputStream,LocalDateTime fechaReferencia){
-        List<Pedido> todosPedidos = cargarPedidos(inputStream);
+    // Para gestión de averías
+    private final Map<String, TipoIncidente> averiasRegistradas = new HashMap<>();
+    private final Set<String> averiasOcurridas = new HashSet<>();
 
-        return todosPedidos.stream().filter(pedido -> esMismoDia(pedido.getHoraRecepcion(),fechaReferencia)).collect(Collectors.toList());
+    @Override
+    public List<Pedido> cargarPedidosPorDia(InputStream inputStream, LocalDateTime fechaReferencia) {
+        List<Pedido> todosPedidos = cargarPedidos(inputStream);
+        return todosPedidos.stream()
+                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), fechaReferencia))
+                .collect(Collectors.toList());
     }
 
     private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
@@ -50,9 +57,7 @@ public class FileServiceImpl implements FileService {
             while ((line = reader.readLine()) != null) {
                 try {
                     Pedido pedido = parsearLineaPedido(line);
-                    if (pedido != null) {
-                        pedidos.add(pedido);
-                    }
+                    pedidos.add(pedido);
                 } catch (Exception e) {
                     log.error("Error al parsear línea de pedido: {}", line, e);
                 }
@@ -80,9 +85,7 @@ public class FileServiceImpl implements FileService {
             while ((line = reader.readLine()) != null) {
                 try {
                     Bloqueo bloqueo = parsearLineaBloqueo(line);
-                    if (bloqueo != null) {
-                        bloqueos.add(bloqueo);
-                    }
+                    bloqueos.add(bloqueo);
                 } catch (Exception e) {
                     log.error("Error al parsear línea de bloqueo: {}", line, e);
                 }
@@ -186,5 +189,128 @@ public class FileServiceImpl implements FileService {
         }
 
         return new Bloqueo(horaInicioVar, horaFinVar, nodosBloqueados);
+    }
+
+    // ===== Métodos de gestión de averías =====
+
+    @Override
+    public int cargarAverias(InputStream inputStream) {
+        int count = 0;
+        averiasRegistradas.clear(); // Limpiar registros anteriores
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue; // Saltar líneas vacías
+                }
+
+                try {
+                    // Formato: tt_######_ti (T1_TA01_TI1)
+                    String[] parts = line.split("_");
+                    if (parts.length == 3) {
+                        Turno turno;
+                        try {
+                            turno = Turno.valueOf(parts[0]);
+                        } catch (IllegalArgumentException e) {
+                            log.error("Turno inválido en línea: {}", line);
+                            continue;
+                        }
+
+                        String codigoCamion = parts[1];
+
+                        TipoIncidente tipoIncidente;
+                        try {
+                            tipoIncidente = TipoIncidente.valueOf(parts[2]);
+                        } catch (IllegalArgumentException e) {
+                            log.error("Tipo de incidente inválido en línea: {}", line);
+                            continue;
+                        }
+
+                        // Clave compuesta: Turno_Camión
+                        String key = turno + "_" + codigoCamion;
+
+                        // Registrar avería
+                        averiasRegistradas.put(key, tipoIncidente);
+                        count++;
+                        log.info("Avería registrada: {}, {}, {}", turno, codigoCamion, tipoIncidente);
+                    } else {
+                        log.warn("Formato incorrecto en línea: {}", line);
+                    }
+                } catch (Exception e) {
+                    log.error("Error al parsear línea de avería: {}", line, e);
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error al leer archivo de averías", e);
+            throw new RuntimeException("Error al leer archivo de averías", e);
+        }
+
+        log.info("Total de averías cargadas: {}", count);
+        return count;
+    }
+
+    @Override
+    public boolean tieneProgramadaAveria(String codigoCamion, LocalDateTime momento) {
+        if (momento == null) {
+            log.warn("Momento nulo al verificar avería para camión {}", codigoCamion);
+            return false;
+        }
+
+        Turno turnoActual = Turno.obtenerTurnoPorHora(momento.getHour());
+        String key = turnoActual + "_" + codigoCamion;
+
+        // Verificar si ya se procesó esta avería hoy
+        String averiaDiaClave = momento.toLocalDate() + "_" + key;
+        if (averiasOcurridas.contains(averiaDiaClave)) {
+            return false; // Ya se procesó esta avería hoy
+        }
+
+        return averiasRegistradas.containsKey(key);
+    }
+
+    @Override
+    public TipoIncidente obtenerIncidenteProgramado(String codigoCamion, Turno turno) {
+        String key = turno + "_" + codigoCamion;
+        return averiasRegistradas.get(key);
+    }
+
+    @Override
+    public void registrarAveriaOcurrida(String codigoCamion, LocalDateTime momento) {
+        if (momento == null) {
+            log.warn("Momento nulo al registrar avería para camión {}", codigoCamion);
+            return;
+        }
+
+        Turno turnoActual = Turno.obtenerTurnoPorHora(momento.getHour());
+        String key = turnoActual + "_" + codigoCamion;
+        String averiaDiaClave = momento.toLocalDate() + "_" + key;
+        averiasOcurridas.add(averiaDiaClave);
+        log.info("Avería registrada como ocurrida: {}", averiaDiaClave);
+    }
+
+    @Override
+    public void limpiarAverias() {
+        averiasRegistradas.clear();
+        averiasOcurridas.clear();
+        log.info("Registro de averías limpiado");
+    }
+
+    @Override
+    public List<Map<String, String>> listarAveriasProgramadas() {
+        List<Map<String, String>> resultado = new ArrayList<>();
+
+        for (Map.Entry<String, TipoIncidente> entry : averiasRegistradas.entrySet()) {
+            String[] parts = entry.getKey().split("_");
+            if (parts.length == 2) {
+                Map<String, String> averia = new HashMap<>();
+                averia.put("turno", parts[0]);
+                averia.put("camion", parts[1]);
+                averia.put("tipoIncidente", entry.getValue().toString());
+                resultado.add(averia);
+            }
+        }
+
+        return resultado;
     }
 }

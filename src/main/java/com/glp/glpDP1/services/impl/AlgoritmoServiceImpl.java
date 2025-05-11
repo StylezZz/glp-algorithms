@@ -1,7 +1,6 @@
 package com.glp.glpDP1.services.impl;
 
 import com.glp.glpDP1.algorithm.AlgoritmoGenetico;
-import com.glp.glpDP1.algorithm.AlgoritmoPSO;
 import com.glp.glpDP1.api.dto.request.AlgoritmoRequest;
 import com.glp.glpDP1.api.dto.request.AlgoritmoSimpleRequest;
 import com.glp.glpDP1.api.dto.response.AlgoritmoResultResponse;
@@ -227,38 +226,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                         Thread.sleep(50); // Simular tiempo de ejecución
                     }
 
-                } else if ("PSO".equalsIgnoreCase(tipoAlgoritmo)) {
-                    // Algoritmo PSO
-                    AlgoritmoPSO algoritmo;
-
-                    // Configurar parámetros si se proporcionaron
-                    if (numParticulas != null &&
-                            numIteraciones != null &&
-                            w != null &&
-                            c1 != null &&
-                            c2 != null) {
-
-                        algoritmo = new AlgoritmoPSO(
-                                numParticulas,
-                                numIteraciones,
-                                w,
-                                c1,
-                                c2
-                        );
-                    } else {
-                        // Usar parámetros por defecto
-                        algoritmo = new AlgoritmoPSO();
-                    }
-
-                    // Ejecutar optimización
-                    rutas = algoritmo.optimizarRutas(
-                            camiones,
-                            pedidos,
-                            mapa,
-                            momentoActual
-                    );
-
-                    fitness = algoritmo.getMejorFitness();
                 } else {
                     throw new IllegalArgumentException("Tipo de algoritmo no soportado: " + tipoAlgoritmo);
                 }

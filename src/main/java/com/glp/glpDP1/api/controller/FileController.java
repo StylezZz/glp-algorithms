@@ -4,7 +4,6 @@ import com.glp.glpDP1.domain.Bloqueo;
 import com.glp.glpDP1.domain.Mapa;
 import com.glp.glpDP1.domain.Pedido;
 import com.glp.glpDP1.services.FileService;
-import com.glp.glpDP1.services.impl.FileServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -65,8 +63,7 @@ public class FileController {
      */
     @PostMapping(value = "/bloqueos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> cargarBloqueos(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "mapa", required = false) String mapaId) {
+            @RequestParam("file") MultipartFile file) {
         try {
             log.info("Cargando archivo de bloqueos: {}", file.getOriginalFilename());
 
@@ -96,17 +93,17 @@ public class FileController {
         }
     }
 
-    @PostMapping(value = "/pedidos/hoy",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String,Object>> cargarPedidosHoy(@RequestParam("file") MultipartFile file){
-        try{
+    @PostMapping(value = "/pedidos/hoy", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String,Object>> cargarPedidosHoy(@RequestParam("file") MultipartFile file) {
+        try {
             log.info("Iniciando algoritmo diario tipo {}", file.getOriginalFilename());
 
-            if(file.isEmpty()){
+            if (file.isEmpty()) {
                 throw new IllegalArgumentException("El archivo está vacío");
             }
 
             LocalDateTime hoy = LocalDateTime.now();
-            List<Pedido> pedidos = ((FileServiceImpl)fileService).cargarPedidosPorDia(file.getInputStream(), hoy);
+            List<Pedido> pedidos = fileService.cargarPedidosPorDia(file.getInputStream(), hoy);
 
             Map<String, Object> response = new HashMap<>();
             response.put("pedidosCargados", pedidos.size());
@@ -114,9 +111,72 @@ public class FileController {
             response.put("fecha", hoy.toLocalDate().toString());
 
             return ResponseEntity.ok(response);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("Error inesperado al cargar archivo: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo", e);
+        }
+    }
+
+    /**
+     * Carga un archivo de averías
+     */
+    @PostMapping(value = "/averias", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> cargarAverias(@RequestParam("file") MultipartFile file) {
+        try {
+            log.info("Cargando archivo de averías: {}", file.getOriginalFilename());
+
+            if (file.isEmpty()) {
+                throw new IllegalArgumentException("El archivo está vacío");
+            }
+
+            int averiasRegistradas = fileService.cargarAverias(file.getInputStream());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("averiasRegistradas", averiasRegistradas);
+            response.put("nombreArchivo", file.getOriginalFilename());
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Error en los datos del archivo: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (IOException e) {
+            log.error("Error al leer el archivo: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al leer el archivo", e);
+        } catch (Exception e) {
+            log.error("Error inesperado al cargar archivo: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar el archivo", e);
+        }
+    }
+
+    /**
+     * Limpia todas las averías registradas
+     */
+    @DeleteMapping("/averias")
+    public ResponseEntity<Map<String, Boolean>> limpiarAverias() {
+        try {
+            fileService.limpiarAverias();
+
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("success", true);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error al limpiar averías: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al limpiar averías", e);
+        }
+    }
+
+    /**
+     * Lista todas las averías programadas
+     */
+    @GetMapping("/averias")
+    public ResponseEntity<List<Map<String, String>>> listarAverias() {
+        try {
+            List<Map<String, String>> averias = fileService.listarAveriasProgramadas();
+            return ResponseEntity.ok(averias);
+        } catch (Exception e) {
+            log.error("Error al listar averías: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al listar averías", e);
         }
     }
 }
