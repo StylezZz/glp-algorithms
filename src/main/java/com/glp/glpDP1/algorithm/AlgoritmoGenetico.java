@@ -2,9 +2,11 @@ package com.glp.glpDP1.algorithm;
 
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
+import com.glp.glpDP1.services.impl.MonitoreoService;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.management.monitor.Monitor;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -30,11 +32,23 @@ public class AlgoritmoGenetico {
     private List<Ruta> mejorSolucion;
     private double mejorFitness;
 
+    private MonitoreoService monitoreoService;
+    private Map<String, List<Ubicacion>> rutasEnProgreso = new HashMap<>();
+    private Map<String, List<Bloqueo>> bloqueosActivos = new HashMap<>();
+
+    public void setMonitoreoService(MonitoreoService monitoreoService) {
+        this.monitoreoService = monitoreoService;
+    }
+
+    private MonitoreoService getMonitoreoService() {
+        return monitoreoService;
+    }
+
     /**
      * Constructor con parámetros predeterminados
      */
     public AlgoritmoGenetico() {
-        this(100, 50, 0.05, 0.7, 5);
+        this(150, 100, 0.08, 0.8, 10);
     }
 
     /**
@@ -68,6 +82,14 @@ public class AlgoritmoGenetico {
         this.pedidosPendientes = preprocesarPedidos(pedidos); // Usar preprocesamiento
         this.mapa = mapa;
         this.momentoActual = momento;
+
+        List<Bloqueo> bloqueos = mapa.getBloqueos().stream()
+                .filter(b -> esBloqueoDuranteEjecucion(b, momento))
+                .collect(Collectors.toList());
+
+        if (monitoreoService != null) {
+            monitoreoService.actualizarBloqueos(bloqueos);
+        }
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -155,37 +177,65 @@ public class AlgoritmoGenetico {
             }
         }
 
+        if(mejorSolucion!=null && monitoreoService!=null){
+            for(Ruta ruta:mejorSolucion){
+                ruta.setMonitoreoService(monitoreoService);
+                ruta.actualizarEstadoMonitoreo(ruta.getOrigen(),momentoActual);
+            }
+        }
+
         // Retornar la mejor solución encontrada
-        return mejorSolucion;
+        return mejorSolucion!=null ? mejorSolucion : new ArrayList<>();
+    }
+
+    // Método para verificar si un bloqueo estará activo durante la ejecución
+    private boolean esBloqueoDuranteEjecucion(Bloqueo bloqueo, LocalDateTime momento) {
+        // Considerar un período de 24 horas desde el momento actual
+        LocalDateTime finPeriodo = momento.plusHours(24);
+
+        return (bloqueo.getHoraFin().isAfter(momento) &&
+                (bloqueo.getHoraInicio().isBefore(finPeriodo) ||
+                        bloqueo.getHoraInicio().isEqual(finPeriodo)));
     }
 
     private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales){
+        pedidosOriginales.sort(Comparator.<Pedido>comparingInt(p->(int)p.getTiempoLimiteEntrega().toHours()).thenComparingDouble(Pedido::getCantidadGLP));
         List<Pedido> pedidosProcesados = new ArrayList<>();
+        double maxCapacidadCamion = camionesDisponibles.stream()
+                                    .mapToDouble(Camion::getCapacidadTanqueGLP).max().orElse(25.0);
         for(Pedido pedido: pedidosOriginales){
-            if(pedido.getCantidadGLP()<=25.0){
+            if(pedido.getCantidadGLP()<=maxCapacidadCamion){
                 pedidosProcesados.add(pedido);
                 continue;
             }
-
+            //Dividir pedido considerando las capacidades de los camiones
             double cantidadRestante = pedido.getCantidadGLP();
             int contador = 1;
             while(cantidadRestante > 0 ){
-                double cantidadParte = Math.min(cantidadRestante,25.0);
+                double mejorCapacidad = encontrarMejorCapacidad(cantidadRestante);
+                double cantidadParte = Math.min(cantidadRestante,mejorCapacidad);
                 cantidadRestante -= cantidadParte;
 
-                Pedido pedidoParte = new Pedido(
-                        pedido.getIdCliente()+"_parte"+contador,
-                        pedido.getUbicacion(),
-                        cantidadParte,
-                        pedido.getHoraRecepcion(),
-                        (int)pedido.getTiempoLimiteEntrega().toHours()
-                );
+                Pedido pedidoParte = new Pedido(pedido.getIdCliente()+"_parte"+contador, pedido.getUbicacion(), cantidadParte, pedido.getHoraRecepcion(), (int)pedido.getTiempoLimiteEntrega().toHours());
 
                 pedidosProcesados.add(pedidoParte);
                 contador++;
             }
         }
         return pedidosProcesados;
+    }
+
+    private double encontrarMejorCapacidad(double cantidadNecesaria){
+        List<Double> capacidadesDisponibles = camionesDisponibles.stream()
+                                   .map(Camion::getCapacidadTanqueGLP).distinct().sorted().collect(Collectors.toList());
+
+        //Encontrar la capacidad más cercana pero mayor a la cantidad necesaria
+        for(Double capacidad: capacidadesDisponibles){
+            if(capacidad>= cantidadNecesaria){
+                return capacidad;
+            }
+        }
+        return capacidadesDisponibles.isEmpty()?25.0: capacidadesDisponibles.get(capacidadesDisponibles.size()-1);
     }
 
     /**
@@ -313,10 +363,10 @@ public class AlgoritmoGenetico {
         }
 
         // Calcular fitness final (ponderado)
-        double fitness = 0.15 * consumoTotal +
-                0.10 * distanciaTotal +
-                0.20 * retrasosTotal +
-                0.50 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+        double fitness = 0.10 * consumoTotal +
+                0.05 * distanciaTotal +
+                0.15 * retrasosTotal +
+                0.65 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
                 0.05 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
 
         individuo.setFitness(fitness);
@@ -460,6 +510,12 @@ public class AlgoritmoGenetico {
             // Optimizar el orden de cada ruta
             for (Ruta ruta : rutasPorCamion.values()) {
                 ruta.optimizarSecuencia();
+            }
+
+            if(monitoreoService!=null){
+                for(Ruta ruta:rutasPorCamion.values()){
+                    rutasEnProgreso.put(ruta.getId(),new ArrayList<>(ruta.getSecuenciaNodos()));
+                }
             }
 
             return new ArrayList<>(rutasPorCamion.values());

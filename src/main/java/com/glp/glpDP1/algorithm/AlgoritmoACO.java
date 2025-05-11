@@ -2,7 +2,6 @@ package com.glp.glpDP1.algorithm;
 
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
-import com.glp.glpDP1.domain.enums.TipoIncidente;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -40,8 +39,10 @@ public class AlgoritmoACO {
     private double mejorFitness;
 
     // Matriz de feromonas y heurísticas
-    private double[][] matrizFeromonas;
-    private double[][] matrizHeuristica;
+    private Map<Ubicacion, Map<Ubicacion, Double>> matrizFeromonas;
+    private Map<Ubicacion, Map<Ubicacion, Double>> matrizHeuristica;
+    private List<Ubicacion> ubicacionesRelevantes;
+    private Map<Ubicacion, List<Pedido>> pedidosPorUbicacion;
 
     private double feromonaMinima;
     private double feromonaMaxima;
@@ -136,22 +137,33 @@ public class AlgoritmoACO {
             }
         }
 
-        // Optimizar las rutas finales (recargas, etc.)
-        // Optimizar las rutas finales (recargas, etc.)
-        if (mejorSolucion != null) {
-            for (Ruta ruta : mejorSolucion) {
-                Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
-                if (camion != null) {
-                    // Primero optimizar la secuencia considerando el tiempo y los bloqueos
-                    // ruta.optimizarSecuenciaConBloqueos(mapa, momentoActual);
+        return mejorSolucion != null ? mejorSolucion : new ArrayList<>();
+    }
 
-                    // Luego optimizar las recargas (el método ya verifica internamente si se requiere reabastecimiento)
-                    ruta.optimizarConRecargas(mapa, camion);
-                }
-            }
+    /**
+     * Registra un evento en la ruta
+     */
+    private void registrarEvento(Ruta ruta, EventoRuta.TipoEvento tipo,
+                                 LocalDateTime momento, Ubicacion ubicacion) {
+        String descripcion = "";
+        switch (tipo) {
+            case INICIO:
+                descripcion = "Inicio de ruta";
+                break;
+            case ENTREGA:
+                descripcion = "Entrega realizada";
+                break;
+            case RECARGA_COMBUSTIBLE:
+                descripcion = "Recarga de combustible";
+                break;
+            case FIN:
+                descripcion = "Regreso al almacén central";
+                break;
+            default:
+                descripcion = tipo.toString();
         }
 
-        return mejorSolucion != null ? mejorSolucion : new ArrayList<>();
+        ruta.registrarEvento(tipo, momento, ubicacion, descripcion);
     }
 
     /**
@@ -209,7 +221,6 @@ public class AlgoritmoACO {
         for (Camion camion : camiones) {
             camion.actualizarEstado(momentoActual);
         }
-
         return camiones.stream()
                 .filter(c -> c.getEstado() == EstadoCamion.DISPONIBLE)
                 .filter(c -> !estaEnMantenimientoProgramado(c))
@@ -229,432 +240,429 @@ public class AlgoritmoACO {
         return false;
     }
 
-    private double calcularPenalizacionBloqueos(Ubicacion origen, Ubicacion destino, LocalDateTime momentoBase) {
-        // Factor de penalización base
-        double penalizacion = 1.0;
-
-        // Calcular tiempo estimado de llegada al destino
-        double distancia = origen.distanciaA(destino);
-        long segundosViaje = (long) (distancia / 50.0 * 3600); // 50 km/h
-        LocalDateTime tiempoLlegada = momentoBase.plusSeconds(segundosViaje);
-
-        // Verificar cada posible bloqueo
-        for (Bloqueo bloqueo : mapa.getBloqueos()) {
-            // Si el tramo estará bloqueado al momento de llegar, aumentar penalización
-            if (bloqueo.tramoBloqueado(origen, destino, tiempoLlegada)) {
-                penalizacion *= 10.0; // Penalización fuerte
-                return penalizacion; // Retornar inmediatamente
-            }
-
-            // Si algún nodo estará bloqueado al momento de llegar, también penalizar
-            for (Ubicacion nodo : bloqueo.getNodosBloqueados()) {
-                // Si está cerca del origen o destino (menos de 3 unidades)
-                if (origen.distanciaA(nodo) <= 3 || destino.distanciaA(nodo) <= 3) {
-                    if (bloqueo.estaBloqueado(nodo, tiempoLlegada)) {
-                        penalizacion *= 2.0;
-                    }
-                }
-            }
-        }
-
-        return penalizacion;
-    }
-
-
     /**
      * Inicializa las matrices de feromonas y heurística
      */
     private void inicializarMatrices() {
-        int numPedidos = pedidosPendientes.size();
-        int numCamiones = camionesDisponibles.size();
+        // Crear lista de ubicaciones relevantes (UN SOLO VEZ)
+        ubicacionesRelevantes = new ArrayList<>();
 
-        // Matriz de feromonas: índice del pedido, índice del camión
-        matrizFeromonas = new double[numPedidos][numCamiones + 1]; // +1 para la opción de no asignar
+        // Agregar almacenes
+        ubicacionesRelevantes.add(mapa.obtenerAlmacenCentral().getUbicacion());
+        mapa.obtenerAlmacenesIntermedios().forEach(a ->
+                ubicacionesRelevantes.add(a.getUbicacion()));
 
-        // Matriz de heurística: inverso de distancia/consumo
-        matrizHeuristica = new double[numPedidos][numCamiones + 1];
-
-        // Inicializar feromonas con valor inicial
-        for (int i = 0; i < numPedidos; i++) {
-            Pedido pedido = pedidosPendientes.get(i);
-            double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
-            double feromonaInicial = inicialFeromona;
-            if (horasLimite < 6) {
-                feromonaInicial *= 2.0;
-            } else {
-                feromonaInicial *= 1.5;
-            }
-            for (int j = 0; j <= numCamiones; j++) {
-                matrizFeromonas[i][j] = feromonaInicial;
+        // Agregar ubicaciones de pedidos (sin duplicados)
+        for (Pedido pedido : pedidosPendientes) {
+            if (!ubicacionesRelevantes.contains(pedido.getUbicacion())) {
+                ubicacionesRelevantes.add(pedido.getUbicacion());
             }
         }
 
-        // Calcular heurística basada en distancia/consumo
-        for (int i = 0; i < numPedidos; i++) {
-            Pedido pedido = pedidosPendientes.get(i);
+        // Agregar ubicaciones iniciales de camiones
+        for (Camion camion : camionesDisponibles) {
+            if (!ubicacionesRelevantes.contains(camion.getUbicacionActual())) {
+                ubicacionesRelevantes.add(camion.getUbicacionActual());
+            }
+        }
 
-            for (int j = 0; j < numCamiones; j++) {
-                Camion camion = camionesDisponibles.get(j);
+        // Agrupar pedidos por ubicación - AGREGAR VALIDACIÓN
+        pedidosPorUbicacion = new HashMap<>();
+        if (pedidosPendientes != null && !pedidosPendientes.isEmpty()) {
+            for (Pedido pedido : pedidosPendientes) {
+                pedidosPorUbicacion.computeIfAbsent(pedido.getUbicacion(), k -> new ArrayList<>())
+                        .add(pedido);
+            }
+        }
 
-                // Calcular distancia
-                int distancia = camion.getUbicacionActual().distanciaA(pedido.getUbicacion());
+        // Inicializar matrices con TODAS las ubicaciones relevantes
+        matrizFeromonas = new HashMap<>();
+        matrizHeuristica = new HashMap<>();
 
-                // Calcular consumo estimado
-                double consumoEstimado = camion.calcularConsumoCombustible(distancia);
+        for (Ubicacion origen : ubicacionesRelevantes) {
+            Map<Ubicacion, Double> feromonaDesde = new HashMap<>();
+            Map<Ubicacion, Double> heuristicaDesde = new HashMap<>();
 
-                // Verificar capacidad
-                boolean capacidadSuficiente = camion.getCapacidadTanqueGLP() >= pedido.getCantidadGLP();
+            for (Ubicacion destino : ubicacionesRelevantes) {
+                // Permitir origen == destino, solo asignar valor 0 o mínimo
+                double valorInicial = origen.equals(destino) ? 0.0 : inicialFeromona;
+                feromonaDesde.put(destino, valorInicial);
 
-                // Verificar combustible
-                boolean combustibleSuficiente = camion.calcularDistanciaMaxima() >= distancia;
-
-                // Calcular penalización por bloqueos
-                double penalizacionBloqueos = calcularPenalizacionBloqueos(
-                        camion.getUbicacionActual(), pedido.getUbicacion(), momentoActual);
-
-                // Si no cumple con requisitos básicos, la heurística es muy baja
-                if (!capacidadSuficiente || !combustibleSuficiente) {
-                    matrizHeuristica[i][j] = 0.001;
-                } else {
-                    double valorBase = 1.0 / (consumoEstimado + 0.1);
-                    double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
-                    double factorUrgencia = horasLimite < 8 ? 2.0 : 1.0;
-                    // Inversamente proporcional al consumo (menor consumo = mejor)
-                    matrizHeuristica[i][j] = (valorBase * factorUrgencia) / penalizacionBloqueos;
-                }
+                // Para heurística, si origen == destino, usar un valor alto para evitarlo
+                double distancia = origen.distanciaA(destino);
+                double valorHeuristica = distancia == 0 ? 0.0 : 1.0 / (distancia + 0.1);
+                heuristicaDesde.put(destino, valorHeuristica);
             }
 
-            // Opción de no asignar (última columna)
-            matrizHeuristica[i][numCamiones] = 0.001; // Desfavorecemos no asignar
+            matrizFeromonas.put(origen, feromonaDesde);
+            matrizHeuristica.put(origen, heuristicaDesde);
         }
+
+        // Inicializar límites MMAS
+        feromonaMaxima = 1.0 / inicialFeromona;
+        feromonaMinima = feromonaMaxima * 0.1;
     }
 
     /**
      * Construye una solución completa (una hormiga)
      */
     private Solucion construirSolucion(double q0Actual) {
-        int numPedidos = pedidosPendientes.size();
-        int numCamiones = camionesDisponibles.size();
+        List<Ruta> rutas = new ArrayList<>();
+        Set<Pedido> pedidosEntregados = new HashSet<>();
 
-        // Asignación de pedidos a camiones (-1 significa no asignado)
-        int[] asignaciones = new int[numPedidos];
-        Arrays.fill(asignaciones, -1);
-
-        // Lista de pedidos no asignados
-        List<Integer> pedidosNoAsignados = new ArrayList<>();
-        for (int i = 0; i < numPedidos; i++) {
-            pedidosNoAsignados.add(i);
-        }
-
-        // Aseguramos que cada camión reciba al menos un pedido si es posible
-        // usando nuestra versión mejorada
-        asignarPedidosIniciales(asignaciones, pedidosNoAsignados);
-
-        // Para cada pedido no asignado, decidir a qué camión asignarlo
-        // Iterar múltiples veces para mejorar asignación
-        for (int intento = 0; intento < 3 && !pedidosNoAsignados.isEmpty(); intento++) {
-            List<Integer> pedidosRestantes = new ArrayList<>(pedidosNoAsignados);
-            for (Integer indexPedido : pedidosRestantes) {
-                // Decidir a qué camión asignarlo con nuestra estrategia mejorada
-                int camionElegido = elegirCamion(indexPedido, asignaciones);
-
-                // Si encontramos un camión válido (no -1), asignar pedido
-                if (camionElegido >= 0 && camionElegido < numCamiones) {
-                    asignaciones[indexPedido] = camionElegido;
-                    pedidosNoAsignados.remove(indexPedido);
-                }
+        // Para cada camión construir su ruta completa
+        for (Camion camion : camionesDisponibles) {
+            Ruta ruta = construirRutaParaCamion(camion, pedidosEntregados, q0Actual);
+            if (ruta != null && !ruta.getPedidosAsignados().isEmpty()) {
+                rutas.add(ruta);
             }
         }
-
-        // Construir rutas a partir de asignaciones
-        List<Ruta> rutas = construirRutas(asignaciones);
 
         // Calcular fitness
         double fitness = calcularFitness(rutas);
 
-        return new Solucion(rutas, fitness, asignaciones);
+        return new Solucion(rutas, fitness);
     }
 
     /**
-     * Asegura que cada camión reciba al menos un pedido inicial si es posible
+     * Construye una ruta completa para un camión específico
      */
-    private void asignarPedidosIniciales(int[] asignaciones, List<Integer> pedidosNoAsignados) {
-        if (pedidosNoAsignados.isEmpty()) return;
+    private Ruta construirRutaParaCamion(Camion camion, Set<Pedido> pedidosEntregados, double q0) {
+        Ruta ruta = new Ruta(camion.getCodigo(), camion.getUbicacionActual());
+        ruta.setDestino(mapa.obtenerAlmacenCentral().getUbicacion());
 
-        // 1. Identificar pedidos críticos (tiempo límite corto)
-        List<Integer> pedidosCriticos = new ArrayList<>();
-        for (Integer indice : pedidosNoAsignados) {
-            Pedido pedido = pedidosPendientes.get(indice);
-            // Considerar críticos los pedidos con menos de 6 horas de margen
-            if (pedido.getTiempoLimiteEntrega().toHours() <= 6) {
-                pedidosCriticos.add(indice);
-            }
-        }
+        Ubicacion ubicacionActual = camion.getUbicacionActual();
+        LocalDateTime tiempoActual = momentoActual;
+        double combustibleActual = camion.getNivelCombustibleActual();
+        double glpActual = 0; // Camión vacío al inicio
 
-        // 2. Asignar primero los pedidos críticos
-        for (Integer indicePedido : pedidosCriticos) {
-            // Encontrar el mejor camión para este pedido crítico
-            int mejorCamion = -1;
-            double mejorValor = -1;
+        // Seguir construyendo la ruta hasta que no sea factible continuar
+        while (true) {
+            Ubicacion proximaUbicacion = elegirProximaUbicacion(
+                    ubicacionActual,
+                    tiempoActual,
+                    pedidosEntregados,
+                    q0,
+                    camion,
+                    glpActual,
+                    combustibleActual
+            );
 
-            for (int i = 0; i < camionesDisponibles.size(); i++) {
-                Camion camion = camionesDisponibles.get(i);
-                Pedido pedido = pedidosPendientes.get(indicePedido);
-
-                // Verificar capacidad
-                if (camion.getCapacidadTanqueGLP() < pedido.getCantidadGLP()) continue;
-
-                // Calcular valor combinado (favoreciendo camiones con más capacidad disponible)
-                double capacidadRestante = camion.getCapacidadTanqueGLP() - pedido.getCantidadGLP();
-                double distancia = camion.getUbicacionActual().distanciaA(pedido.getUbicacion());
-                double valor = capacidadRestante - (distancia * 0.1);
-
-                if (valor > mejorValor) {
-                    mejorValor = valor;
-                    mejorCamion = i;
-                }
+            if (proximaUbicacion == null) {
+                // No hay más ubicaciones factibles
+                break;
             }
 
-            // Si encontramos un camión adecuado, asignar y remover de pendientes
-            if (mejorCamion != -1) {
-                asignaciones[indicePedido] = mejorCamion;
-                pedidosNoAsignados.remove(Integer.valueOf(indicePedido));
-            }
-        }
+            // Calcular ruta A* a la próxima ubicación
+            List<Ubicacion> rutaHastaProxima = mapa.encontrarRutaConTiempo(
+                    ubicacionActual,
+                    proximaUbicacion,
+                    tiempoActual,
+                    camion.getVelocidadPromedio()
+            );
 
-        // 3. Asignar al menos un pedido a cada camión (para el resto de pedidos no críticos)
-        List<Integer> camionesVacios = new ArrayList<>();
-        for (int i = 0; i < camionesDisponibles.size(); i++) {
-            // Verificar si el camión ya tiene algún pedido asignado
-            boolean tieneAsignacion = false;
-            for (int j = 0; j < asignaciones.length; j++) {
-                if (asignaciones[j] == i) {
-                    tieneAsignacion = true;
+            if (rutaHastaProxima.isEmpty()) {
+                // No se puede llegar
+                break;
+            }
+
+            // Calcular distancia y consumo
+            int distancia = 0;
+            for (int i = 0; i < rutaHastaProxima.size() - 1; i++) {
+                distancia += rutaHastaProxima.get(i).distanciaA(rutaHastaProxima.get(i + 1));
+            }
+
+            double consumo = camion.calcularConsumoCombustible(distancia);
+
+            // Verificar si hay suficiente combustible
+            if (combustibleActual < consumo) {  // CORREGIDO: era 'combustible'
+                // Necesita recarga, ir al almacén más cercano
+                Almacen almacenCercano = mapa.obtenerAlmacenMasCercano(ubicacionActual);  // CORREGIDO: ahora declarado
+                proximaUbicacion = almacenCercano.getUbicacion();
+
+                rutaHastaProxima = mapa.encontrarRutaConTiempo(
+                        ubicacionActual,
+                        proximaUbicacion,
+                        tiempoActual,
+                        camion.getVelocidadPromedio()
+                );
+
+                if (rutaHastaProxima.isEmpty()) {
                     break;
                 }
             }
 
-            if (!tieneAsignacion) {
-                camionesVacios.add(i);
-            }
-        }
+            // Avanzar tiempo
+            double horasViaje = distancia / camion.getVelocidadPromedio();
+            tiempoActual = tiempoActual.plusMinutes((long) (horasViaje * 60));
 
-        // Intentar asignar un pedido a cada camión vacío
-        for (Integer indiceCamion : camionesVacios) {
-            if (pedidosNoAsignados.isEmpty()) break;
+            // Actualizar combustible
+            combustibleActual -= consumo;
 
-            Camion camion = camionesDisponibles.get(indiceCamion);
-            Integer mejorPedido = null;
-            double mejorValor = -1;
+            // Procesar entrega/recarga en la ubicación
+            Ubicacion finalProximaUbicacion = proximaUbicacion;
+            boolean esAlmacen = mapa.getAlmacenes().stream()
+                    .anyMatch(a -> a.getUbicacion().equals(finalProximaUbicacion));
 
-            // Buscar el pedido más compatible para este camión
-            for (Integer indicePedido : pedidosNoAsignados) {
-                Pedido pedido = pedidosPendientes.get(indicePedido);
+            if (esAlmacen) {  // CORREGIDO: verificar si es almacén
+                // Recargar combustible
+                combustibleActual = camion.getCapacidadTanqueCombustible();
+                registrarEvento(ruta, EventoRuta.TipoEvento.RECARGA_COMBUSTIBLE,
+                        tiempoActual, proximaUbicacion);
+            } else {
+                // Procesar pedidos en esta ubicación
+                List<Pedido> pedidosAqui = pedidosPorUbicacion.get(proximaUbicacion);
+                if (pedidosAqui != null) {
+                    for (Pedido pedido : pedidosAqui) {
+                        if (!pedidosEntregados.contains(pedido) &&
+                                glpActual + pedido.getCantidadGLP() <= camion.getCapacidadTanqueGLP() &&
+                                !pedido.estaRetrasado(tiempoActual)) {
 
-                // Verificar si el camión puede manejar este pedido
-                if (camion.getCapacidadTanqueGLP() < pedido.getCantidadGLP()) continue;
+                            ruta.agregarPedido(pedido);
+                            pedidosEntregados.add(pedido);
+                            glpActual += pedido.getCantidadGLP();
 
-                // Calcular valor basado en distancia y tiempo límite
-                int distancia = camion.getUbicacionActual().distanciaA(pedido.getUbicacion());
-                double horasLimite = pedido.getTiempoLimiteEntrega().toHours();
-
-                // Priorizar pedidos cercanos con amplio margen de tiempo
-                double valor = (100 - distancia) + (horasLimite * 2);
-
-                if (valor > mejorValor) {
-                    mejorValor = valor;
-                    mejorPedido = indicePedido;
+                            registrarEvento(ruta, EventoRuta.TipoEvento.ENTREGA,
+                                    tiempoActual, proximaUbicacion);
+                        }
+                    }
                 }
             }
 
-            // Si encontramos un pedido adecuado, asignar
-            if (mejorPedido != null) {
-                asignaciones[mejorPedido] = indiceCamion;
-                pedidosNoAsignados.remove(mejorPedido);
-            }
+            ubicacionActual = proximaUbicacion;
         }
+
+        // Regresar al almacén central
+        List<Ubicacion> rutaRegreso = mapa.encontrarRutaConTiempo(
+                ubicacionActual,
+                mapa.obtenerAlmacenCentral().getUbicacion(),
+                tiempoActual,
+                camion.getVelocidadPromedio()
+        );
+
+        if (!rutaRegreso.isEmpty()) {
+            // Calcular tiempo de regreso y actualizar
+            int distanciaRegreso = 0;
+            for (int i = 0; i < rutaRegreso.size() - 1; i++) {
+                distanciaRegreso += rutaRegreso.get(i).distanciaA(rutaRegreso.get(i + 1));
+            }
+            double horasRegreso = distanciaRegreso / camion.getVelocidadPromedio();
+            tiempoActual = tiempoActual.plusMinutes((long) (horasRegreso * 60));
+
+            registrarEvento(ruta, EventoRuta.TipoEvento.FIN,
+                    tiempoActual, mapa.obtenerAlmacenCentral().getUbicacion());
+        }
+
+        return ruta;
     }
 
     /**
-     * Elige a qué camión asignar un pedido basado en feromonas y heurística
+     * Elige la próxima ubicación a visitar basado en feromonas y heurística
      */
-    private int elegirCamion(int indicePedido, int[] asignaciones) {
-        int numCamiones = camionesDisponibles.size();
+    private Ubicacion elegirProximaUbicacion(Ubicacion actual,
+                                             LocalDateTime tiempo,
+                                             Set<Pedido> pedidosEntregados,
+                                             double q0,
+                                             Camion camion,
+                                             double glpActual,
+                                             double combustibleActual) {
+
+        Map<Ubicacion, Double> feromonasDesdeActual = matrizFeromonas.get(actual);
+        Map<Ubicacion, Double> heuristicaDesdeActual = matrizHeuristica.get(actual);
+
+        if (feromonasDesdeActual == null || heuristicaDesdeActual == null) {
+            return null;
+        }
+
+        // Filtrar ubicaciones factibles
+        List<Ubicacion> ubicacionesFactibles = new ArrayList<>();
+        for (Ubicacion destino : ubicacionesRelevantes) {
+            if (esUbicacionFactible(actual, destino, tiempo, pedidosEntregados,
+                    camion, glpActual, combustibleActual)) {
+                ubicacionesFactibles.add(destino);
+            }
+        }
+
+        if (ubicacionesFactibles.isEmpty()) {
+            return null;
+        }
+
         double random = Math.random();
 
-        // Regla de decisión pseudoaleatoria proporcional
         if (random < q0) {
             // Explotación: elegir la mejor opción
+            Ubicacion mejorUbicacion = null;
             double mejorValor = -1;
-            int mejorCamion = -1;
 
-            for (int j = 0; j <= numCamiones; j++) {
-                double feromonaHeuristica =
-                        Math.pow(matrizFeromonas[indicePedido][j], alfa) *
-                                Math.pow(matrizHeuristica[indicePedido][j], beta);
+            for (Ubicacion destino : ubicacionesFactibles) {
+                double feromona = feromonasDesdeActual.get(destino);
+                double heuristica = heuristicaDesdeActual.get(destino);
+                double valor = Math.pow(feromona, alfa) * Math.pow(heuristica, beta);
 
-                if (feromonaHeuristica > mejorValor) {
-                    // Verificar restricciones de capacidad si es un camión
-                    if (j < numCamiones) {
-                        Camion camion = camionesDisponibles.get(j);
-                        Pedido pedido = pedidosPendientes.get(indicePedido);
-
-                        // Verificar capacidad GLP disponible con pedidos ya asignados
-                        double glpYaAsignado = 0;
-                        for (int k = 0; k < asignaciones.length; k++) {
-                            if (asignaciones[k] == j) {
-                                glpYaAsignado += pedidosPendientes.get(k).getCantidadGLP();
-                            }
-                        }
-
-                        double capacidadDisponible = camion.getCapacidadTanqueGLP() - glpYaAsignado;
-                        if (capacidadDisponible < pedido.getCantidadGLP()) {
-                            continue;
-                        }
-                    }
-
-                    mejorValor = feromonaHeuristica;
-                    mejorCamion = j;
+                if (valor > mejorValor) {
+                    mejorValor = valor;
+                    mejorUbicacion = destino;
                 }
             }
 
-            return mejorCamion;
+            return mejorUbicacion;
         } else {
-            // Exploración: selección basada en probabilidad
-            double[] probabilidades = new double[numCamiones + 1];
+            // Exploración: selección probabilística
             double sumaTotal = 0;
+            Map<Ubicacion, Double> probabilidades = new HashMap<>();
 
-            for (int j = 0; j <= numCamiones; j++) {
-                double valor = Math.pow(matrizFeromonas[indicePedido][j], alfa) *
-                        Math.pow(matrizHeuristica[indicePedido][j], beta);
+            for (Ubicacion destino : ubicacionesFactibles) {
+                double feromona = feromonasDesdeActual.get(destino);
+                double heuristica = heuristicaDesdeActual.get(destino);
+                double valor = Math.pow(feromona, alfa) * Math.pow(heuristica, beta);
 
-                // Verificar restricciones para camiones
-                if (j < numCamiones) {
-                    Camion camion = camionesDisponibles.get(j);
-                    Pedido pedido = pedidosPendientes.get(indicePedido);
-
-                    // Verificar capacidad GLP con pedidos ya asignados
-                    double glpYaAsignado = 0;
-                    for (int k = 0; k < asignaciones.length; k++) {
-                        if (asignaciones[k] == j) {
-                            glpYaAsignado += pedidosPendientes.get(k).getCantidadGLP();
-                        }
-                    }
-
-                    double capacidadDisponible = camion.getCapacidadTanqueGLP() - glpYaAsignado;
-                    if (capacidadDisponible < pedido.getCantidadGLP()) {
-                        valor = 0; // No es una opción viable
-                    }
-                }
-
-                probabilidades[j] = valor;
+                probabilidades.put(destino, valor);
                 sumaTotal += valor;
             }
 
             // Normalizar probabilidades
-            if (sumaTotal > 0) {
-                for (int j = 0; j <= numCamiones; j++) {
-                    probabilidades[j] /= sumaTotal;
-                }
-            } else {
-                // Si no hay opciones viables, no asignar el pedido
-                return numCamiones; // Índice de "no asignar"
-            }
-
-            // Selección basada en ruleta
-            double r = Math.random();
+            double r = Math.random() * sumaTotal;
             double acumulado = 0;
 
-            for (int j = 0; j <= numCamiones; j++) {
-                acumulado += probabilidades[j];
+            for (Map.Entry<Ubicacion, Double> entry : probabilidades.entrySet()) {
+                acumulado += entry.getValue();
                 if (r <= acumulado) {
-                    return j;
+                    return entry.getKey();
                 }
             }
 
-            return numCamiones; // Por defecto, no asignar
+            return ubicacionesFactibles.get(0); // Fallback
         }
     }
 
     /**
-     * Construye rutas a partir de asignaciones de pedidos a camiones
+     * Verifica si una ubicación es factible visitar
      */
-    private List<Ruta> construirRutas(int[] asignaciones) {
-        Map<String, Ruta> rutasPorCamion = new HashMap<>();
+    private boolean esUbicacionFactible(Ubicacion origen,
+                                        Ubicacion destino,
+                                        LocalDateTime tiempo,
+                                        Set<Pedido> pedidosEntregados,
+                                        Camion camion,
+                                        double glpActual,
+                                        double combustibleActual) {
 
-        // Para cada pedido, asignarlo a la ruta del camión correspondiente
-        for (int i = 0; i < asignaciones.length; i++) {
-            int indiceCamion = asignaciones[i];
+        // Verificar si hay ruta
+        List<Ubicacion> ruta = mapa.encontrarRutaConTiempo(
+                origen, destino, tiempo, camion.getVelocidadPromedio());
 
-            // Si el pedido no está asignado, continuar
-            if (indiceCamion == -1 || indiceCamion >= camionesDisponibles.size()) {
-                continue;
-            }
-
-            // Obtener el camión y el pedido
-            Camion camion = camionesDisponibles.get(indiceCamion);
-            Pedido pedido = pedidosPendientes.get(i);
-
-            // Obtener o crear la ruta para este camión
-            String codigoCamion = camion.getCodigo();
-            Ruta ruta = rutasPorCamion.get(codigoCamion);
-
-            if (ruta == null) {
-                ruta = new Ruta(codigoCamion, camion.getUbicacionActual());
-                ruta.setDestino(mapa.obtenerAlmacenCentral().getUbicacion());
-                rutasPorCamion.put(codigoCamion, ruta);
-            }
-
-            // Añadir el pedido a la ruta
-            ruta.agregarPedido(pedido);
+        if (ruta.isEmpty()) {
+            return false;
         }
 
-        // NUEVA SECCIÓN: Optimizar la carga inicial de cada camión
-        for (Map.Entry<String, Ruta> entry : rutasPorCamion.entrySet()) {
-            String codigoCamion = entry.getKey();
-            Ruta ruta = entry.getValue();
+        // Calcular consumo necesario
+        int distancia = 0;
+        for (int i = 0; i < ruta.size() - 1; i++) {
+            distancia += ruta.get(i).distanciaA(ruta.get(i + 1));
+        }
 
-            // Encontrar el camión correspondiente
-            Camion camion = camionesDisponibles.stream()
-                    .filter(c -> c.getCodigo().equals(codigoCamion))
-                    .findFirst()
-                    .orElse(null);
+        double consumo = camion.calcularConsumoCombustible(distancia);
 
-            if (camion != null) {
-                // Calcular el GLP total necesario para esta ruta
-                double glpNecesario = ruta.getPedidosAsignados().stream()
-                        .mapToDouble(Pedido::getCantidadGLP)
-                        .sum();
+        // Si es un almacén, siempre factible para recargar
+        if (mapa.getAlmacenes().stream()
+                .anyMatch(a -> a.getUbicacion().equals(destino))) {
+            return true;
+        }
 
-                // Limpiar el nivel actual de GLP (para asegurar valor exacto)
-                camion.setNivelGLPActual(0.0);
+        // Verificar si hay suficiente combustible
+        if (combustibleActual < consumo) {
+            return false;
+        }
 
-                // Cargar el camión con la cantidad exacta de GLP necesaria (sin exceder su capacidad)
-                double cargaOptima = Math.min(glpNecesario, camion.getCapacidadTanqueGLP());
-                camion.cargarGLP(cargaOptima);
+        // Verificar si hay pedidos pendientes en esta ubicación
+        List<Pedido> pedidosAqui = pedidosPorUbicacion.get(destino);
+        if (pedidosAqui == null) {
+            return false;
+        }
 
-                // Si la ruta requiere más GLP del que el camión puede llevar en un viaje,
-                // modificamos la optimización para incluir paradas en el almacén principal
-                if (glpNecesario > camion.getCapacidadTanqueGLP()) {
-                    ruta.setRequiereReabastecimiento(true);
-                    // Marcamos para optimización especial
+        boolean hayPedidosPendientes = false;
+        for (Pedido pedido : pedidosAqui) {
+            if (!pedidosEntregados.contains(pedido) &&
+                    glpActual + pedido.getCantidadGLP() <= camion.getCapacidadTanqueGLP()) {
+
+                // Calcular tiempo de llegada
+                double horasViaje = distancia / camion.getVelocidadPromedio();
+                LocalDateTime llegada = tiempo.plusMinutes((long) (horasViaje * 60));
+
+                if (!pedido.estaRetrasado(llegada)) {
+                    hayPedidosPendientes = true;
+                    break;
                 }
             }
         }
 
-        // Optimizar el orden de cada ruta
-        for (Ruta ruta : rutasPorCamion.values()) {
-            Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
-            ruta.optimizarSecuenciaConBloqueos(mapa, momentoActual);
-            double glpTotal = ruta.getPedidosAsignados().stream().mapToDouble(Pedido::getCantidadGLP).sum();
+        return hayPedidosPendientes;
+    }
 
-            if (camion != null && glpTotal > camion.getCapacidadTanqueGLP()) {
-                ruta.setRequiereReabastecimiento(true);
-                ruta.optimizarConRecargas(mapa, camion);
+
+    /**
+     * Actualiza la matriz de feromonas basado en las soluciones
+     */
+    private void actualizarFeromonas(List<Solucion> soluciones) {
+        // Evaporación de feromonas
+        for (Ubicacion origen : matrizFeromonas.keySet()) {
+            Map<Ubicacion, Double> feromonasDesde = matrizFeromonas.get(origen);
+            for (Ubicacion destino : feromonasDesde.keySet()) {
+                double feromonaActual = feromonasDesde.get(destino);
+                feromonasDesde.put(destino, feromonaActual * (1 - rho));
             }
         }
 
-        return new ArrayList<>(rutasPorCamion.values());
+        // Depósito de feromonas
+        for (Solucion solucion : soluciones) {
+            double deltaFeromona = 1.0 / (solucion.fitness + 0.1);
+
+            // Depositar feromona en cada ruta
+            for (Ruta ruta : solucion.rutas) {
+                List<Ubicacion> nodosRuta = ruta.getSecuenciaNodos();
+                for (int i = 0; i < nodosRuta.size() - 1; i++) {
+                    Ubicacion origen = nodosRuta.get(i);
+                    Ubicacion destino = nodosRuta.get(i + 1);
+
+                    Map<Ubicacion, Double> feromonasDesde = matrizFeromonas.get(origen);
+                    if (feromonasDesde != null && feromonasDesde.containsKey(destino)) {
+                        double feromonaActual = feromonasDesde.get(destino);
+                        feromonasDesde.put(destino, feromonaActual + deltaFeromona);
+                    }
+                }
+            }
+        }
+
+        // Elitismo: reforzar la mejor solución global
+        if (mejorSolucion != null) {
+            double deltaMejor = 1.0 / (mejorFitness + 0.1);
+
+            for (Ruta ruta : mejorSolucion) {
+                List<Ubicacion> nodosRuta = ruta.getSecuenciaNodos();
+                for (int i = 0; i < nodosRuta.size() - 1; i++) {
+                    Ubicacion origen = nodosRuta.get(i);
+                    Ubicacion destino = nodosRuta.get(i + 1);
+
+                    Map<Ubicacion, Double> feromonasDesde = matrizFeromonas.get(origen);
+                    if (feromonasDesde != null && feromonasDesde.containsKey(destino)) {
+                        double feromonaActual = feromonasDesde.get(destino);
+                        feromonasDesde.put(destino, feromonaActual + deltaMejor * 2);
+                    }
+                }
+            }
+        }
+
+        // Aplicar límites MMAS
+        for (Ubicacion origen : matrizFeromonas.keySet()) {
+            Map<Ubicacion, Double> feromonasDesde = matrizFeromonas.get(origen);
+            for (Ubicacion destino : feromonasDesde.keySet()) {
+                double feromona = feromonasDesde.get(destino);
+                if (feromona > feromonaMaxima) {
+                    feromonasDesde.put(destino, feromonaMaxima);
+                } else if (feromona < feromonaMinima) {
+                    feromonasDesde.put(destino, feromonaMinima);
+                }
+            }
+        }
     }
 
     /**
@@ -757,7 +765,7 @@ public class AlgoritmoACO {
         // Calcular fitness final (ponderado) con mayor penalización por pedidos no asignados
         double fitness = 0.02 * distanciaTotal +
                 0.03 * retrasosTotal +
-                0.90 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
+                0.80 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
                 0.03 * (sobrecargaTotal * 1000) +     // Reducir penalización por sobrecarga
                 0.02 * penalizacionAverias -
                 0.05 * bonificacionAlmacenPrincipal;       // Reducir penalización por averías
@@ -773,91 +781,10 @@ public class AlgoritmoACO {
         return q0Base + (q0Max - q0Base) * (1.0 / (1.0 + Math.exp(-12 * progreso + 6)));
     }
 
-    private void actualizarLimitesMMAS() {
-        if (mejorFitness > 0) {
-            feromonaMaxima = 1.0 / ((1 - rho) * mejorFitness);
-            feromonaMinima = feromonaMaxima * 0.1;
-        } else {
-            feromonaMaxima = 10.0;
-            feromonaMinima = 0.01;
-        }
-    }
-
-    /**
-     * Actualiza la matriz de feromonas basado en las soluciones
-     */
-    private void actualizarFeromonas(List<Solucion> soluciones) {
-        int numPedidos = pedidosPendientes.size();
-        int numCamiones = camionesDisponibles.size();
-
-        // Evaporación de feromonas
-        for (int i = 0; i < numPedidos; i++) {
-            for (int j = 0; j <= numCamiones; j++) {
-                matrizFeromonas[i][j] *= (1 - rho);
-                if (matrizFeromonas[i][j] < 0.01) {
-                    matrizFeromonas[i][j] = 0.01; // Valor mínimo de feromona
-                }
-            }
-        }
-
-        // Depósito de feromonas por cada hormiga, proporcional a calidad de solución
-        for (Solucion solucion : soluciones) {
-            double deltaFeromona = 1.0 / (solucion.fitness + 0.1); // Inversamente proporcional al fitness
-
-            // Aplicar depósito de feromonas en los caminos utilizados
-            for (int i = 0; i < solucion.asignaciones.length; i++) {
-                int j = solucion.asignaciones[i];
-                if (j >= 0 && j <= numCamiones) {
-                    matrizFeromonas[i][j] += deltaFeromona;
-                }
-            }
-        }
-
-        // Reforzar adicionalmente la mejor solución global (elitismo)
-        if (mejorSolucion != null) {
-            double deltaMejor = 1.0 / (mejorFitness + 0.1);
-
-            // Determinar asignaciones en la mejor solución
-            Map<String, Set<String>> mejorAsignacion = new HashMap<>();
-            for (Ruta ruta : mejorSolucion) {
-                Set<String> idsPedidos = ruta.getPedidosAsignados().stream()
-                        .map(Pedido::getId)
-                        .collect(Collectors.toSet());
-                mejorAsignacion.put(ruta.getCodigoCamion(), idsPedidos);
-            }
-
-            // Reforzar estas asignaciones
-            for (int i = 0; i < pedidosPendientes.size(); i++) {
-                Pedido pedido = pedidosPendientes.get(i);
-
-                for (int j = 0; j < camionesDisponibles.size(); j++) {
-                    Camion camion = camionesDisponibles.get(j);
-                    Set<String> pedidosAsignados = mejorAsignacion.get(camion.getCodigo());
-
-                    if (pedidosAsignados != null && pedidosAsignados.contains(pedido.getId())) {
-                        matrizFeromonas[i][j] += deltaMejor * 2; // Refuerzo adicional
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < matrizFeromonas.length; i++) {
-            for (int j = 0; j < matrizFeromonas[i].length; j++) {
-                if (matrizFeromonas[i][j] > feromonaMaxima) {
-                    matrizFeromonas[i][j] = feromonaMaxima;
-                } else if (matrizFeromonas[i][j] < feromonaMinima) {
-                    matrizFeromonas[i][j] = feromonaMinima;
-                }
-            }
-        }
-    }
-
     /**
      * Verifica si el algoritmo ha convergido
      */
     private boolean haConvergido() {
-        // Cambiar condición para que sea más difícil converger
-
         // Si estamos en iteraciones tempranas, no permitir convergencia
         if (iteracionActual < 40) {
             return false; // Forzar al menos 40 iteraciones
@@ -865,18 +792,20 @@ public class AlgoritmoACO {
 
         // Comprobar si la matriz de feromonas ha convergido
         int filasConvergidas = 0;
-        double umbralConvergencia = 0.95; // Aumentado de 0.9 a 0.95
+        double umbralConvergencia = 0.95;
 
-        for (int i = 0; i < matrizFeromonas.length; i++) {
+        for (Map.Entry<Ubicacion, Map<Ubicacion, Double>> entrada : matrizFeromonas.entrySet()) {
+            Map<Ubicacion, Double> feromonasDesde = entrada.getValue();
+
             double max = 0;
             double segundoMax = 0;
 
-            for (int j = 0; j < matrizFeromonas[i].length; j++) {
-                if (matrizFeromonas[i][j] > max) {
+            for (Double feromona : feromonasDesde.values()) {
+                if (feromona > max) {
                     segundoMax = max;
-                    max = matrizFeromonas[i][j];
-                } else if (matrizFeromonas[i][j] > segundoMax) {
-                    segundoMax = matrizFeromonas[i][j];
+                    max = feromona;
+                } else if (feromona > segundoMax) {
+                    segundoMax = feromona;
                 }
             }
 
@@ -885,7 +814,7 @@ public class AlgoritmoACO {
             }
         }
 
-        boolean convergenciaFeromonas = filasConvergidas >= matrizFeromonas.length * 0.85;
+        boolean convergenciaFeromonas = filasConvergidas >= matrizFeromonas.size() * 0.85;
 
         boolean estabilidadFitness = false;
 
@@ -919,69 +848,6 @@ public class AlgoritmoACO {
     /**
      * Clase interna para representar una solución (una hormiga)
      */
-    private static class Solucion {
-        private final List<Ruta> rutas;
-        private final double fitness;
-        private final int[] asignaciones;
-
-        public Solucion(List<Ruta> rutas, double fitness, int[] asignaciones) {
-            this.rutas = rutas;
-            this.fitness = fitness;
-            this.asignaciones = asignaciones;
-        }
-    }
-
-    /**
-     * Simula la posibilidad de avería en un camión durante la simulación
-     *
-     * @param camion    Camión a evaluar
-     * @param distancia Distancia que recorrería
-     * @return true si hay avería, false si no
-     */
-    private boolean simularAveria(Camion camion, double distancia) {
-        Random random = new Random();
-
-        // Probabilidad base de avería por km
-        double probBase = 0.0001; // 0.01% por km
-
-        // Aumentar probabilidad según distancia total
-        double probabilidadAveria = probBase * distancia;
-
-        // Ajustar según tiempo desde último mantenimiento
-        if (camion.getFechaUltimoMantenimiento() != null) {
-            long diasDesdeMantenimiento = Duration.between(
-                    camion.getFechaUltimoMantenimiento(), momentoActual).toDays();
-
-            // Aumentar probabilidad si han pasado más de 30 días
-            if (diasDesdeMantenimiento > 30) {
-                probabilidadAveria *= (1 + (diasDesdeMantenimiento - 30) * 0.03);
-            }
-        }
-
-        // Limitar probabilidad máxima a 30%
-        if (probabilidadAveria > 0.3) {
-            probabilidadAveria = 0.3;
-        }
-
-        // Determinar si hay avería
-        return random.nextDouble() < probabilidadAveria;
-    }
-
-    /**
-     * Determina el tipo de avería aleatoriamente
-     *
-     * @return Tipo de incidente
-     */
-    private TipoIncidente determinarTipoAveria() {
-        Random random = new Random();
-        double valor = random.nextDouble();
-
-        if (valor < 0.5) {
-            return TipoIncidente.TI1; // 50% probabilidad TI1 (menos severo)
-        } else if (valor < 0.8) {
-            return TipoIncidente.TI2; // 30% probabilidad TI2
-        } else {
-            return TipoIncidente.TI3; // 20% probabilidad TI3 (más severo)
-        }
+    private record Solucion(List<Ruta> rutas, double fitness) {
     }
 }

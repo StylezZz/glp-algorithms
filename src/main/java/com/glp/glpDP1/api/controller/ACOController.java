@@ -57,7 +57,7 @@ public class ACOController {
                     request.getMomentoActual() : LocalDateTime.now();
 
             // Convertir escenario
-            EscenarioSimulacion escenario = null;
+            EscenarioSimulacion escenario;
             if (request.getEscenario() != null) {
                 try {
                     escenario = EscenarioSimulacion.valueOf(request.getEscenario());

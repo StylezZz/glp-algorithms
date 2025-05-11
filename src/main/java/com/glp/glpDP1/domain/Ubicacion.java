@@ -6,8 +6,8 @@ import java.util.Objects;
 
 @Getter
 public class Ubicacion {
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
 
     public Ubicacion(int x, int y) {
         this.x = x;
