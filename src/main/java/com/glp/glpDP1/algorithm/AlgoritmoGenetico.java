@@ -199,32 +199,43 @@ public class AlgoritmoGenetico {
     }
 
     private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales){
+        pedidosOriginales.sort(Comparator.<Pedido>comparingInt(p->(int)p.getTiempoLimiteEntrega().toHours()).thenComparingDouble(Pedido::getCantidadGLP));
         List<Pedido> pedidosProcesados = new ArrayList<>();
+        double maxCapacidadCamion = camionesDisponibles.stream()
+                                    .mapToDouble(Camion::getCapacidadTanqueGLP).max().orElse(25.0);
         for(Pedido pedido: pedidosOriginales){
-            if(pedido.getCantidadGLP()<=25.0){
+            if(pedido.getCantidadGLP()<=maxCapacidadCamion){
                 pedidosProcesados.add(pedido);
                 continue;
             }
-
+            //Dividir pedido considerando las capacidades de los camiones
             double cantidadRestante = pedido.getCantidadGLP();
             int contador = 1;
             while(cantidadRestante > 0 ){
-                double cantidadParte = Math.min(cantidadRestante,25.0);
+                double mejorCapacidad = encontrarMejorCapacidad(cantidadRestante);
+                double cantidadParte = Math.min(cantidadRestante,mejorCapacidad);
                 cantidadRestante -= cantidadParte;
 
-                Pedido pedidoParte = new Pedido(
-                        pedido.getIdCliente()+"_parte"+contador,
-                        pedido.getUbicacion(),
-                        cantidadParte,
-                        pedido.getHoraRecepcion(),
-                        (int)pedido.getTiempoLimiteEntrega().toHours()
-                );
+                Pedido pedidoParte = new Pedido(pedido.getIdCliente()+"_parte"+contador, pedido.getUbicacion(), cantidadParte, pedido.getHoraRecepcion(), (int)pedido.getTiempoLimiteEntrega().toHours());
 
                 pedidosProcesados.add(pedidoParte);
                 contador++;
             }
         }
         return pedidosProcesados;
+    }
+
+    private double encontrarMejorCapacidad(double cantidadNecesaria){
+        List<Double> capacidadesDisponibles = camionesDisponibles.stream()
+                                   .map(Camion::getCapacidadTanqueGLP).distinct().sorted().collect(Collectors.toList());
+
+        //Encontrar la capacidad más cercana pero mayor a la cantidad necesaria
+        for(Double capacidad: capacidadesDisponibles){
+            if(capacidad>= cantidadNecesaria){
+                return capacidad;
+            }
+        }
+        return capacidadesDisponibles.isEmpty()?25.0: capacidadesDisponibles.get(capacidadesDisponibles.size()-1);
     }
 
     /**

@@ -271,6 +271,34 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 double distanciaTotal = calcularDistanciaTotal(rutas);
                 double consumoCombustible = calcularConsumoCombustible(rutas);
                 int pedidosEntregados = calcularPedidosEntregados(rutas);
+                double maxCapacidadDisponible = camiones.stream().mapToDouble(Camion::getCapacidadTanqueGLP).max().orElse(0.0);
+                List<Map<String,Object>> pedidosNoAsignados = new ArrayList<>();
+                for(Pedido pedido: pedidos){
+                    boolean asignado = false;
+                    for(Ruta ruta:rutas){
+                        if(ruta.getPedidosAsignados().contains(pedido)){
+                            asignado = true;
+                            break;
+                        }
+                    }
+                    if(!asignado){
+                        Map<String,Object> pedidosNoAsignado = new HashMap<>();
+                        pedidosNoAsignado.put("idPedido",pedido.getId());
+                        pedidosNoAsignado.put("cantidadGLP",pedido.getCantidadGLP());
+                        pedidosNoAsignado.put("horaRecepcion",pedido.getHoraRecepcion());
+
+                        String razon;
+                        if(pedido.getCantidadGLP() > maxCapacidadDisponible){
+                            razon = "Excede capacidad maxima de camiones disponibles";
+                        }else if(pedido.getHoraLimiteEntrega().isBefore(momentoActual)){
+                            razon = "Fuera de ventana de tiempo";
+                        }else{
+                            razon = "No se pudo optimizar en las rutas disponibles";
+                        }
+                        pedidosNoAsignado.put("razon", razon);
+                        pedidosNoAsignados.add(pedidosNoAsignado);
+                    }
+                }
 
                 // Crear objeto de resultado
                 Map<String, Object> metricas = new HashMap<>();
