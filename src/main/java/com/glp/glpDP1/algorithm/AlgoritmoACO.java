@@ -4,7 +4,6 @@ import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.cglib.core.Local;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -111,10 +110,10 @@ public class AlgoritmoACO {
     /**
      * Ejecuta el algoritmo ACO para encontrar la mejor asignación de rutas
      *
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos  Lista de pedidos pendientes
-     * @param mapa     Mapa de la ciudad
-     * @param momentoActual  Momento actual para la planificación
+     * @param camiones      Lista de camiones disponibles
+     * @param pedidos       Lista de pedidos pendientes
+     * @param mapa          Mapa de la ciudad
+     * @param momentoActual Momento actual para la planificación
      * @return Lista de rutas optimizadas
      */
     // Reemplazar el método optimizarRutas
@@ -124,6 +123,9 @@ public class AlgoritmoACO {
         this.pedidosPendientes = preprocesarPedidos(pedidos);
         this.mapa = mapa;
         this.iteracionActual = 0;
+
+        LocalDate fechaActual = momentoActual.toLocalDate();
+        mapa.filtrarBloqueosParaFecha(fechaActual);
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -145,7 +147,7 @@ public class AlgoritmoACO {
 
             // Cada hormiga construye una solución
             for (int hormiga = 0; hormiga < numHormigas; hormiga++) {
-                // System.out.println("Construyendo solución para hormiga " + hormiga + " en iteración " + iteracion);
+                System.out.println("Construyendo solución para hormiga " + hormiga + " en iteración " + iteracion);
                 double q0Actual = calcularQ0Adaptativo(iteracion);
                 Solucion solucion = construirSolucion(q0Actual, momentoActual);
 
@@ -365,7 +367,7 @@ public class AlgoritmoACO {
         // Para cada camión construir su ruta completa
         for (Camion camion : camionesDisponibles) {
             Ruta ruta = construirRutaParaCamion(camion, pedidosEntregados, q0Actual, momentoActual);
-            if (ruta != null && !ruta.getPedidosAsignados().isEmpty()) {
+            if (!ruta.getPedidosAsignados().isEmpty()) {
                 rutas.add(ruta);
             }
         }
@@ -556,7 +558,7 @@ public class AlgoritmoACO {
             // Calcular tiempo de llegada al siguiente nodo
             int distancia = ubicacionActual.distanciaA(siguiente);
             double horasViaje = distancia / camion.getVelocidadPromedio();
-            LocalDateTime tiempoLlegada = tiempoActual.plusMinutes((long)(horasViaje * 60));
+            LocalDateTime tiempoLlegada = tiempoActual.plusMinutes((long) (horasViaje * 60));
 
             // Verificar si hay bloqueo en el momento de llegada
             if (mapa.estaBloqueado(siguiente, tiempoLlegada) ||
@@ -633,7 +635,7 @@ public class AlgoritmoACO {
             // Calcular tiempo de llegada
             int distancia = ubicacionActual.distanciaA(siguiente);
             double horasViaje = distancia / camion.getVelocidadPromedio();
-            LocalDateTime tiempoLlegada = tiempoActual.plusMinutes((long)(horasViaje * 60));
+            LocalDateTime tiempoLlegada = tiempoActual.plusMinutes((long) (horasViaje * 60));
 
             // Contar violaciones
             if (mapa.estaBloqueado(siguiente, tiempoLlegada) ||
@@ -735,8 +737,8 @@ public class AlgoritmoACO {
                 // Determinar si aplicamos la avería en este punto
                 // La avería ocurre entre el 5% y 35% del recorrido total de la ruta
                 int totalNodosEstimados = rutaCompleta.size() * 4; // Estimación del tamaño total
-                int minNodo = Math.max(1, (int)(totalNodosEstimados * 0.05));
-                int maxNodo = Math.min(rutaCompleta.size() - 1, (int)(totalNodosEstimados * 0.35));
+                int minNodo = Math.max(1, (int) (totalNodosEstimados * 0.05));
+                int maxNodo = Math.min(rutaCompleta.size() - 1, (int) (totalNodosEstimados * 0.35));
 
                 // Si estamos en el rango de puntos donde puede ocurrir la avería
                 if (rutaCompleta.size() >= minNodo && rutaCompleta.size() <= maxNodo) {
@@ -1013,7 +1015,7 @@ public class AlgoritmoACO {
                         // Calcular tiempo estimado de llegada
                         int distancia = actual.distanciaA(destino);
                         double horasViaje = distancia / camion.getVelocidadPromedio();
-                        LocalDateTime tiempoLlegada = tiempo.plusMinutes((long)(horasViaje * 60));
+                        LocalDateTime tiempoLlegada = tiempo.plusMinutes((long) (horasViaje * 60));
 
                         // Si estamos cerca del tiempo límite, aumentar urgencia
                         Duration tiempoRestante = Duration.between(tiempoLlegada, pedido.getHoraLimiteEntrega());
@@ -1058,7 +1060,7 @@ public class AlgoritmoACO {
                         // Calcular tiempo estimado de llegada
                         int distancia = actual.distanciaA(destino);
                         double horasViaje = distancia / camion.getVelocidadPromedio();
-                        LocalDateTime tiempoLlegada = tiempo.plusMinutes((long)(horasViaje * 60));
+                        LocalDateTime tiempoLlegada = tiempo.plusMinutes((long) (horasViaje * 60));
 
                         // Si estamos cerca del tiempo límite, aumentar urgencia
                         Duration tiempoRestante = Duration.between(tiempoLlegada, pedido.getHoraLimiteEntrega());
@@ -1226,7 +1228,7 @@ public class AlgoritmoACO {
                     int distancia = actual.distanciaA(siguiente);
                     double horasViaje = camion != null ?
                             distancia / camion.getVelocidadPromedio() : distancia / 50.0;
-                    tiempoRuta = tiempoRuta.plusMinutes((long)(horasViaje * 60));
+                    tiempoRuta = tiempoRuta.plusMinutes((long) (horasViaje * 60));
 
                     UbicacionTemporal siguienteTemp = new UbicacionTemporal(siguiente, tiempoRuta);
 
@@ -1257,7 +1259,7 @@ public class AlgoritmoACO {
                     int distancia = actual.distanciaA(siguiente);
                     double horasViaje = camion != null ?
                             distancia / camion.getVelocidadPromedio() : distancia / 50.0;
-                    tiempoRuta = tiempoRuta.plusMinutes((long)(horasViaje * 60));
+                    tiempoRuta = tiempoRuta.plusMinutes((long) (horasViaje * 60));
 
                     UbicacionTemporal siguienteTemp = new UbicacionTemporal(siguiente, tiempoRuta);
 
@@ -1558,8 +1560,9 @@ public class AlgoritmoACO {
 
         /**
          * Verifica si un camión está en mantenimiento en un momento dado
+         *
          * @param codigoCamion Código del camión
-         * @param momento Momento actual
+         * @param momento      Momento actual
          * @return true si está en mantenimiento, false en caso contrario
          */
         public boolean estaEnMantenimiento(String codigoCamion, LocalDateTime momento) {
@@ -1600,8 +1603,9 @@ public class AlgoritmoACO {
 
         /**
          * Verifica si un camión tendrá mantenimiento en las próximas horas
-         * @param codigoCamion Código del camión
-         * @param momento Momento actual
+         *
+         * @param codigoCamion      Código del camión
+         * @param momento           Momento actual
          * @param horasVerificacion Horas a verificar hacia adelante
          * @return true si tendrá mantenimiento, false en caso contrario
          */
@@ -1633,8 +1637,9 @@ public class AlgoritmoACO {
          */
         /**
          * Encuentra la próxima fecha de mantenimiento para un camión
+         *
          * @param codigoCamion Código del camión
-         * @param momento Momento actual
+         * @param momento      Momento actual
          * @return Próxima fecha de mantenimiento o null si no hay más mantenimientos programados
          */
         public LocalDateTime proximoMantenimiento(String codigoCamion, LocalDateTime momento) {
@@ -1722,11 +1727,25 @@ public class AlgoritmoACO {
                 this.aplicada = false;
             }
 
-            public String getTurno() { return turno; }
-            public String getCodigoCamion() { return codigoCamion; }
-            public String getTipoIncidente() { return tipoIncidente; }
-            public boolean isAplicada() { return aplicada; }
-            public void setAplicada(boolean aplicada) { this.aplicada = aplicada; }
+            public String getTurno() {
+                return turno;
+            }
+
+            public String getCodigoCamion() {
+                return codigoCamion;
+            }
+
+            public String getTipoIncidente() {
+                return tipoIncidente;
+            }
+
+            public boolean isAplicada() {
+                return aplicada;
+            }
+
+            public void setAplicada(boolean aplicada) {
+                this.aplicada = aplicada;
+            }
 
             @Override
             public String toString() {
@@ -1776,6 +1795,7 @@ public class AlgoritmoACO {
 
         /**
          * Determina el turno actual basado en la hora
+         *
          * @param momento Hora actual
          * @return Código del turno (T1, T2 o T3)
          */
@@ -1793,8 +1813,9 @@ public class AlgoritmoACO {
 
         /**
          * Verifica si un camión tiene avería programada para el turno actual
+         *
          * @param codigoCamion Código del camión
-         * @param momento Momento actual
+         * @param momento      Momento actual
          * @return true si tiene avería programada que no ha sido aplicada
          */
         public boolean tieneAveriaProgramada(String codigoCamion, LocalDateTime momento) {
@@ -1815,8 +1836,9 @@ public class AlgoritmoACO {
 
         /**
          * Obtiene los detalles de la avería programada para un camión
+         *
          * @param codigoCamion Código del camión
-         * @param momento Momento actual
+         * @param momento      Momento actual
          * @return La avería programada o null si no hay
          */
         public RegistroAveria obtenerAveriaProgramada(String codigoCamion, LocalDateTime momento) {
@@ -1837,6 +1859,7 @@ public class AlgoritmoACO {
 
         /**
          * Calcula el momento en que termina la inmovilización de un camión
+         *
          * @param tipoIncidente Tipo de incidente (TI1, TI2, TI3)
          * @param momentoAveria Momento en que ocurrió la avería
          * @return Momento en que termina la inmovilización
@@ -1855,6 +1878,7 @@ public class AlgoritmoACO {
 
         /**
          * Calcula el momento en que el camión vuelve a estar disponible
+         *
          * @param tipoIncidente Tipo de incidente (TI1, TI2, TI3)
          * @param momentoAveria Momento en que ocurrió la avería
          * @return Momento en que el camión vuelve a estar disponible
@@ -1894,6 +1918,7 @@ public class AlgoritmoACO {
 
         /**
          * Marca una avería como aplicada
+         *
          * @param averia Registro de avería a marcar
          */
         public void marcarAveriaComoAplicada(RegistroAveria averia) {
@@ -1904,6 +1929,7 @@ public class AlgoritmoACO {
 
         /**
          * Determina el punto en la ruta donde debe ocurrir la avería
+         *
          * @param rutaCompleta Lista de ubicaciones que forman la ruta
          * @return Índice en la ruta donde debe ocurrir la avería
          */
@@ -1914,8 +1940,8 @@ public class AlgoritmoACO {
 
             // La avería debe ocurrir entre el 5% y 35% de la ruta
             int tamanoRuta = rutaCompleta.size();
-            int minIndice = Math.max(1, (int)(tamanoRuta * 0.05));
-            int maxIndice = Math.min(tamanoRuta - 1, (int)(tamanoRuta * 0.35));
+            int minIndice = Math.max(1, (int) (tamanoRuta * 0.05));
+            int maxIndice = Math.min(tamanoRuta - 1, (int) (tamanoRuta * 0.35));
 
             // Generar un índice aleatorio dentro del rango
             return minIndice + new Random().nextInt(maxIndice - minIndice + 1);
@@ -1923,7 +1949,8 @@ public class AlgoritmoACO {
 
         /**
          * Actualiza el estado de un camión según sus averías
-         * @param camion Camión a actualizar
+         *
+         * @param camion        Camión a actualizar
          * @param momentoActual Momento actual
          */
         public void actualizarEstadoCamionSegunAverias(Camion camion, LocalDateTime momentoActual) {
@@ -1954,10 +1981,11 @@ public class AlgoritmoACO {
 
     /**
      * Registra un evento de avería en la ruta
-     * @param ruta Ruta donde registrar el evento
+     *
+     * @param ruta          Ruta donde registrar el evento
      * @param tipoIncidente Tipo de incidente (TI1, TI2, TI3)
-     * @param momento Momento en que ocurre el evento
-     * @param ubicacion Ubicación donde ocurre el evento
+     * @param momento       Momento en que ocurre el evento
+     * @param ubicacion     Ubicación donde ocurre el evento
      */
     private void registrarEventoAveria(Ruta ruta, String tipoIncidente,
                                        LocalDateTime momento, Ubicacion ubicacion) {
@@ -1984,7 +2012,6 @@ public class AlgoritmoACO {
 
         ruta.registrarEvento(tipoEvento, momento, ubicacion, descripcion);
     }
-
 
 
 }
