@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -2012,7 +2011,4 @@ public class AlgoritmoACO {
 
         ruta.registrarEvento(tipoEvento, momento, ubicacion, descripcion);
     }
-
-
 }
-
