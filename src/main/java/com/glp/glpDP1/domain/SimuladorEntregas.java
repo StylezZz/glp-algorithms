@@ -1,17 +1,16 @@
 package com.glp.glpDP1.domain;
 
+import com.glp.glpDP1.domain.enums.EstadoCamion;
 import com.glp.glpDP1.domain.enums.TipoIncidente;
 import com.glp.glpDP1.domain.enums.Turno;
 import com.glp.glpDP1.repository.DataRepository;
 import com.glp.glpDP1.services.impl.AveriaService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class SimuladorEntregas {
@@ -32,6 +31,7 @@ public class SimuladorEntregas {
         this.averiaService = averiaService;
         this.dataRepository = dataRepository;
     }
+    
     /**
      * Simula la ejecución de una lista de rutas
      * 
@@ -40,7 +40,7 @@ public class SimuladorEntregas {
      * @return Las rutas con los tiempos de entrega actualizados
      */
     public List<Ruta> simularEntregas(List<Ruta> rutas, LocalDateTime momentoInicio) {
-        return simularEntregas(rutas, momentoInicio, null, false);
+        return simularEntregas(rutas, momentoInicio, null, false, null);
     }
 
     /**
@@ -54,13 +54,31 @@ public class SimuladorEntregas {
      */
     public List<Ruta> simularEntregas(List<Ruta> rutas, LocalDateTime momentoInicio, Mapa mapa,
             boolean considerarAverias) {
+        return simularEntregas(rutas, momentoInicio, mapa, considerarAverias, null);
+    }
+    
+    /**
+     * Simula la ejecución de una lista de rutas considerando posibles averías
+     * 
+     * @param rutas             Lista de rutas generadas por el algoritmo
+     * @param momentoInicio     Momento de inicio de la simulación
+     * @param mapa              Mapa con información de almacenes
+     * @param considerarAverias Si se deben simular averías
+     * @param rutasAdicionales  Lista donde se registrarán las rutas adicionales generadas por trasvases
+     * @return Las rutas con los tiempos de entrega actualizados
+     */
+    public List<Ruta> simularEntregas(
+            List<Ruta> rutas, 
+            LocalDateTime momentoInicio, 
+            Mapa mapa,
+            boolean considerarAverias,
+            List<Ruta> rutasAdicionales) {
+        
         for (Ruta ruta : rutas) {
-            simularRuta(ruta, momentoInicio, mapa, considerarAverias);
+            simularRuta(ruta, momentoInicio, mapa, considerarAverias, rutasAdicionales);
         }
         return rutas;
     }
-
-    // Método simularRuta mejorado en SimuladorEntregas.java
 
     /**
      * Simula la ejecución de una ruta específica con manejo detallado de averías
@@ -69,9 +87,16 @@ public class SimuladorEntregas {
      * @param momentoInicio     Momento de inicio
      * @param mapa              Mapa de la ciudad
      * @param considerarAverias Si se deben considerar averías
+     * @param rutasAdicionales  Lista donde se registrarán las rutas adicionales generadas por trasvases
      * @return true si la ruta fue interrumpida por avería
      */
-    private boolean simularRuta(Ruta ruta, LocalDateTime momentoInicio, Mapa mapa, boolean considerarAverias) {
+    private boolean simularRuta(
+            Ruta ruta, 
+            LocalDateTime momentoInicio, 
+            Mapa mapa, 
+            boolean considerarAverias,
+            List<Ruta> rutasAdicionales) {
+            
         // Establecer hora de inicio
         ruta.setHoraInicio(momentoInicio);
         log.info("------------------------------------------------------------------");
@@ -209,15 +234,18 @@ public class SimuladorEntregas {
                     log.info("  - Carga pendiente para entrega: {:.2f} m³ ({} pedidos)",
                             cargaRestante, pedidosPendientes.size());
 
-                    // Simulación simplificada de trasvase: marcar un porcentaje de pedidos como no
-                    // entregables
-                    if (tipoIncidente == TipoIncidente.TI2 || tipoIncidente == TipoIncidente.TI3) {
+                    // Simulación de trasvase para tipos TI2 y TI3
+                    if ((tipoIncidente == TipoIncidente.TI2 || tipoIncidente == TipoIncidente.TI3) && dataRepository != null) {
                         log.info("  - Se requiere trasvase de carga para continuar entregas");
-
-                        // Simular que el 50% de los pedidos se trasvasan (simplificación)
-                        int pedidosTrasvase = pedidosPendientes.size() / 2;
-                        log.info("  - Simulación: {} de {} pedidos podrán ser entregados por otras unidades",
-                                pedidosTrasvase, pedidosPendientes.size());
+                        
+                        // Procesar trasvase con los camiones reales de la flota
+                        List<DetalleTrasvase> trasvases = manejarTrasvase(
+                                camion, pedidosPendientes, nodo, momentoActual, ruta, rutasAdicionales);
+                        
+                        // Registrar trasvases en la ruta
+                        for (DetalleTrasvase trasvase : trasvases) {
+                            ruta.agregarTrasvase(trasvase);
+                        }
                     }
                 }
 
@@ -355,16 +383,239 @@ public class SimuladorEntregas {
     }
 
     /**
-     * Método auxiliar para obtener los camiones de un almacén
-     * En un sistema real, esto se haría a través de un repositorio o servicio
+     * Maneja el trasvase de pedidos durante una avería
+     * @param camionAveriado Camión que sufre la avería
+     * @param pedidosPendientes Lista de pedidos pendientes a transferir
+     * @param ubicacionAveria Ubicación donde ocurre la avería
+     * @param momentoActual Momento en que ocurre la avería
+     * @param ruta Ruta afectada por la avería
+     * @param rutasAdicionales Lista donde se registrarán las rutas generadas por trasvases
+     * @return Lista de trasvases realizados
      */
-    private List<Camion> getCamionesDelAlmacen(Mapa mapa, Almacen almacen) {
-        // Esta es una implementación simplificada para fines de simulación
-        List<Camion> camiones = new ArrayList<>();
-
-        // En un sistema real, se consultaría la base de datos o un servicio
-        // para obtener los camiones asignados a este almacén
-
-        return camiones;
+    private List<DetalleTrasvase> manejarTrasvase(
+            Camion camionAveriado, 
+            List<Pedido> pedidosPendientes, 
+            Ubicacion ubicacionAveria,
+            LocalDateTime momentoActual,
+            Ruta ruta,
+            List<Ruta> rutasAdicionales) {
+            
+        List<DetalleTrasvase> trasvases = new ArrayList<>();
+        
+        if (dataRepository == null) {
+            log.warn("No se puede realizar trasvase: falta repositorio de datos");
+            return trasvases;
+        }
+        
+        // Obtener todos los camiones de la flota
+        List<Camion> todosLosCamiones = dataRepository.obtenerCamiones();
+        
+        // Filtrar solo los camiones disponibles (no en mantenimiento, no averiados)
+        List<Camion> camionesDisponibles = todosLosCamiones.stream()
+                .filter(c -> !c.getCodigo().equals(camionAveriado.getCodigo())) // Excluir el camión averiado
+                .filter(c -> c.getEstado() == EstadoCamion.DISPONIBLE || c.getEstado() == EstadoCamion.EN_RUTA)
+                .collect(Collectors.toList());
+        
+        if (camionesDisponibles.isEmpty()) {
+            log.warn("No hay camiones disponibles para realizar trasvase");
+            return trasvases;
+        }
+        
+        log.info("Camiones disponibles para trasvase: {}", 
+                camionesDisponibles.stream()
+                        .map(Camion::getCodigo)
+                        .collect(Collectors.joining(", ")));
+        
+        // Ordenar camiones por distancia a la ubicación de la avería
+        camionesDisponibles.sort(Comparator.comparingInt(
+                c -> c.getUbicacionActual().distanciaA(ubicacionAveria)));
+        
+        // Tiempo estimado para llegar al punto de avería (para cada camión)
+        Map<String, LocalDateTime> tiemposLlegada = new HashMap<>();
+        for (Camion camion : camionesDisponibles) {
+            int distancia = camion.getUbicacionActual().distanciaA(ubicacionAveria);
+            double horasViaje = distancia / camion.getVelocidadPromedio();
+            LocalDateTime horaLlegada = momentoActual.plusMinutes((long)(horasViaje * 60));
+            tiemposLlegada.put(camion.getCodigo(), horaLlegada);
+            
+            log.info("  - Camión {} puede llegar en {} min ({}), distancia: {} km",
+                    camion.getCodigo(), 
+                    (long)(horasViaje * 60),
+                    horaLlegada,
+                    distancia);
+        }
+        
+        // Asignar pedidos a camiones disponibles
+        Map<String, List<Pedido>> pedidosPorCamion = asignarPedidosACamiones(
+                pedidosPendientes, camionesDisponibles);
+        
+        // Para cada camión que recibe pedidos
+        for (Map.Entry<String, List<Pedido>> entry : pedidosPorCamion.entrySet()) {
+            String codigoCamionDestino = entry.getKey();
+            List<Pedido> pedidosTransferidos = entry.getValue();
+            
+            if (pedidosTransferidos.isEmpty()) continue;
+            
+            // Camión destino
+            Camion camionDestino = camionesDisponibles.stream()
+                .filter(c -> c.getCodigo().equals(codigoCamionDestino))
+                .findFirst().orElse(null);
+            
+            if (camionDestino == null) continue;
+            
+            // Tiempo de llegada del camión destino
+            LocalDateTime momentoLlegada = tiemposLlegada.get(codigoCamionDestino);
+            
+            // Tiempo para realizar el trasvase (15 min por pedido, mínimo 30 min)
+            int minutosTotales = Math.max(30, pedidosTransferidos.size() * 15);
+            LocalDateTime momentoFinTrasvase = momentoLlegada.plusMinutes(minutosTotales);
+            
+            // Cantidad total de GLP transferida
+            double glpTotal = pedidosTransferidos.stream()
+                .mapToDouble(Pedido::getCantidadGLP)
+                .sum();
+            
+            // Crear registro de trasvase
+            DetalleTrasvase detalle = new DetalleTrasvase(
+                camionAveriado.getCodigo(),
+                camionDestino.getCodigo(),
+                ubicacionAveria,
+                momentoLlegada,
+                momentoFinTrasvase,
+                new ArrayList<>(pedidosTransferidos),
+                glpTotal
+            );
+            
+            trasvases.add(detalle);
+            
+            // Registrar evento en la ruta
+            ruta.registrarEvento(
+                EventoRuta.TipoEvento.TRASVASE,
+                momentoLlegada,
+                ubicacionAveria,
+                String.format("Inicio trasvase a camión %s: %d pedidos, %.2f m³", 
+                    camionDestino.getCodigo(), 
+                    pedidosTransferidos.size(), 
+                    glpTotal)
+            );
+            
+            ruta.registrarEvento(
+                EventoRuta.TipoEvento.TRASVASE,
+                momentoFinTrasvase,
+                ubicacionAveria,
+                String.format("Fin trasvase a camión %s", camionDestino.getCodigo())
+            );
+            
+            // Log detallado del trasvase
+            log.info("DETALLE TRASVASE: {} → {}", camionAveriado.getCodigo(), camionDestino.getCodigo());
+            log.info("  - Ubicación: {}", ubicacionAveria);
+            log.info("  - Momento inicio: {}", momentoLlegada);
+            log.info("  - Momento fin: {}", momentoFinTrasvase);
+            log.info("  - Duración: {} minutos", minutosTotales);
+            log.info("  - Pedidos: {} unidades", pedidosTransferidos.size());
+            log.info("  - Volumen GLP: {:.2f} m³", glpTotal);
+            
+            // Actualizar estado del camión de destino
+            camionDestino.setNivelGLPActual(camionDestino.getNivelGLPActual() + glpTotal);
+            camionDestino.setUbicacionActual(ubicacionAveria);  // Se desplaza a la ubicación de la avería
+            
+            // Crear una nueva ruta para el camión de destino y registrarla si hay una lista para ello
+            Ruta nuevaRuta = crearRutaContinuacion(
+                camionDestino, 
+                pedidosTransferidos, 
+                ubicacionAveria, 
+                momentoFinTrasvase);
+                
+            if (rutasAdicionales != null && nuevaRuta != null) {
+                rutasAdicionales.add(nuevaRuta);
+                log.info("  - Nueva ruta registrada en lista de rutas adicionales: {}", nuevaRuta.getId());
+            }
+        }
+        
+        return trasvases;
+    }
+    
+    /**
+     * Asigna pedidos a camiones disponibles según su capacidad
+     * @return Mapa de código de camión a lista de pedidos asignados
+     */
+    private Map<String, List<Pedido>> asignarPedidosACamiones(
+            List<Pedido> pedidos, List<Camion> camiones) {
+        
+        Map<String, List<Pedido>> asignacion = new HashMap<>();
+        Map<String, Double> capacidadRestante = new HashMap<>();
+        
+        // Inicializar capacidad restante para cada camión
+        for (Camion camion : camiones) {
+            capacidadRestante.put(camion.getCodigo(), 
+                camion.getCapacidadTanqueGLP() - camion.getNivelGLPActual());
+            asignacion.put(camion.getCodigo(), new ArrayList<>());
+        }
+        
+        // Ordenar pedidos por urgencia (deadline más cercano primero)
+        List<Pedido> pedidosOrdenados = new ArrayList<>(pedidos);
+        pedidosOrdenados.sort(Comparator.comparing(Pedido::getHoraLimiteEntrega));
+        
+        // Asignar pedidos a camiones
+        for (Pedido pedido : pedidosOrdenados) {
+            // Buscar el camión con mayor capacidad disponible
+            Camion mejorCamion = null;
+            double mayorCapacidad = 0;
+            
+            for (Camion camion : camiones) {
+                double capacidad = capacidadRestante.get(camion.getCodigo());
+                if (capacidad >= pedido.getCantidadGLP() && capacidad > mayorCapacidad) {
+                    mayorCapacidad = capacidad;
+                    mejorCamion = camion;
+                }
+            }
+            
+            // Asignar al mejor camión encontrado
+            if (mejorCamion != null) {
+                String codigo = mejorCamion.getCodigo();
+                asignacion.get(codigo).add(pedido);
+                capacidadRestante.put(codigo, capacidadRestante.get(codigo) - pedido.getCantidadGLP());
+                log.info("  - Pedido {} asignado a camión {}: {:.2f} m³ (capacidad restante: {:.2f} m³)",
+                        pedido.getId(), codigo, pedido.getCantidadGLP(), capacidadRestante.get(codigo));
+            } else {
+                log.warn("  - No se pudo transferir pedido {}: {:.2f} m³ (excede capacidad de todos los camiones)",
+                        pedido.getId(), pedido.getCantidadGLP());
+            }
+        }
+        
+        return asignacion;
+    }
+    
+    /**
+     * Crea una nueva ruta para el camión que recibe pedidos en trasvase
+     * @return La nueva ruta creada
+     */
+    private Ruta crearRutaContinuacion(
+            Camion camion, 
+            List<Pedido> pedidos, 
+            Ubicacion origen, 
+            LocalDateTime horaInicio) {
+        
+        // Crear nueva ruta para este camión
+        Ruta nuevaRuta = new Ruta(camion.getCodigo(), origen);
+        nuevaRuta.setHoraInicio(horaInicio);
+        
+        // Agregar todos los pedidos recibidos
+        for (Pedido pedido : pedidos) {
+            nuevaRuta.agregarPedido(pedido);
+            pedido.setCamionAsignado(camion.getCodigo());
+        }
+        
+        // Realizar una optimización básica de la secuencia
+        nuevaRuta.optimizarSecuencia();
+        
+        log.info("Nueva ruta creada para camión {} después de trasvase:", camion.getCodigo());
+        log.info("  - {} pedidos a entregar", pedidos.size());
+        log.info("  - Distancia estimada: {:.2f} km", nuevaRuta.getDistanciaTotal());
+        
+        // Actualizar estado del camión
+        camion.setEstado(EstadoCamion.EN_RUTA);
+        
+        return nuevaRuta;
     }
 }

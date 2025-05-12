@@ -4,6 +4,7 @@ import com.glp.glpDP1.api.dto.request.SimulacionRequest;
 import com.glp.glpDP1.domain.Camion;
 import com.glp.glpDP1.domain.Mapa;
 import com.glp.glpDP1.domain.Pedido;
+import com.glp.glpDP1.domain.Ruta;
 import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.impl.SimulacionSemanalService;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +66,11 @@ public class SimulacionSemanalController {
                     mapa,
                     fechaInicio
             );
+
+            if(resultado.containsKey("rutasTrasvase")){
+                int rutasTrasvase = ((List<Ruta>)resultado.get("rutasTrasvase")).size();
+                resultado.put("totalRutasTrasvase", rutasTrasvase);
+            }
 
             // Agregar información adicional
             resultado.put("id", UUID.randomUUID().toString());

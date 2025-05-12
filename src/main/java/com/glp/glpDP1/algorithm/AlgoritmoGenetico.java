@@ -301,6 +301,8 @@ public class AlgoritmoGenetico {
         double consumoTotal = 0.0;      // Consumo total de combustible
         double distanciaTotal = 0.0;    // Distancia total recorrida
         double retrasosTotal = 0.0;     // Suma de retrasos (en minutos)
+        int pedidosRetrasados = 0;      // Número de pedidos retrasados
+        int totalPedidosAsignados = 0;   // Número total de pedidos asignados
         double pedidosNoAsignados = 0;  // Número de pedidos sin asignar
         double sobrecargaTotal = 0.0;   // Suma de sobrecargas de GLP en camiones
         double riesgoAverias = 0.0;     // Riesgo de averías basado en la distancia
@@ -338,9 +340,10 @@ public class AlgoritmoGenetico {
             if (glpTotal > camion.getCapacidadTanqueGLP()) {
                 sobrecargaTotal += (glpTotal - camion.getCapacidadTanqueGLP());
             }
-    
+            int rutaPedidosRetrasados = 0;
             // Calcular retrasos potenciales
             for (Pedido pedido : ruta.getPedidosAsignados()) {
+                totalPedidosAsignados++;
                 // Estimar tiempo de entrega basado en distancia y velocidad
                 Ubicacion origen = camion.getUbicacionActual();
                 int distanciaAlPedido = origen.distanciaA(pedido.getUbicacion());
@@ -352,6 +355,8 @@ public class AlgoritmoGenetico {
                 if (entregaEstimada.isAfter(pedido.getHoraLimiteEntrega())) {
                     Duration retraso = Duration.between(pedido.getHoraLimiteEntrega(), entregaEstimada);
                     retrasosTotal += retraso.toMinutes();
+                    pedidosRetrasados++;
+                    rutaPedidosRetrasados++;
                 }
             }
     
@@ -369,6 +374,11 @@ public class AlgoritmoGenetico {
             
             // El riesgo aumenta con la distancia y es influenciado por el tipo de camión
             riesgoAverias += ruta.getDistanciaTotal() * factorRiesgo / 100; // Normalizado
+
+            // Calcular porcentaje de retrasos para esta ruta (para reportes)
+            double porcentajeRetrasosRuta = ruta.getPedidosAsignados().isEmpty() ? 0 : 
+            (double) rutaPedidosRetrasados / ruta.getPedidosAsignados().size() * 100;
+        ruta.setEstadisticasRetrasos(rutaPedidosRetrasados, porcentajeRetrasosRuta);
         }
     
         // Contar pedidos no asignados
@@ -377,16 +387,33 @@ public class AlgoritmoGenetico {
                 pedidosNoAsignados++;
             }
         }
-    
-        // Calcular fitness final (ponderado)
-        double fitness = 0.10 * consumoTotal +
-                0.05 * distanciaTotal +
-                0.15 * retrasosTotal +
-                0.60 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
-                0.05 * (sobrecargaTotal * 1000) +     // Penalización fuerte por sobrecarga
-                0.05 * riesgoAverias;                 // Penalización por riesgo de averías
+        
+        double fitness ;
+
+        if(retrasosTotal>0){
+            fitness = Double.MAX_VALUE;
+        }else{
+            fitness = 0.15 * consumoTotal +
+                      0.10 * distanciaTotal +
+                      0.65 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+                      0.05 * (sobrecargaTotal * 1000) +     // Penalización fuerte por sobrecarga
+                      0.05 * riesgoAverias;                 // Penalización por riesgo de averías
+        }             
     
         individuo.setFitness(fitness);
+
+        // Almacenar estadísticas en el individuo para reportes
+        individuo.setEstadisticas(
+            Map.of(
+                "consumoTotal", consumoTotal,
+                "distanciaTotal", distanciaTotal,
+                "retrasosTotal", retrasosTotal,
+                "pedidosRetrasados", pedidosRetrasados,
+                "totalPedidosAsignados", totalPedidosAsignados,
+                "porcentajeRetrasos", totalPedidosAsignados > 0 ? (double)pedidosRetrasados/totalPedidosAsignados*100 : 0,
+                "pedidosNoAsignados", pedidosNoAsignados
+            )
+        );
     }
 
     /**
@@ -466,12 +493,21 @@ public class AlgoritmoGenetico {
     private class Individuo {
         private List<Integer> genes;
         private double fitness;
+        private Map<String,Object> estadisticas; // Nuevo campo para estadísticas
 
         public Individuo() {
             this.genes = new ArrayList<>();
             this.fitness = Double.MAX_VALUE;
+            this.estadisticas = new HashMap<>(); // Inicializar el mapa de estadísticas
         }
 
+        public void setEstadisticas(Map<String, Object> estadisticas) {
+            this.estadisticas = estadisticas;
+        }
+
+        public Map<String,Object> getEstadisticas(){
+            return estadisticas;
+        }
 
 
         /**

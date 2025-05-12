@@ -50,6 +50,7 @@ public class SimulacionSemanalService {
             Mapa mapa,
             LocalDateTime fechaInicio) {
 
+
         log.info("Iniciando simulación semanal desde {}", 
                 fechaInicio.format(DateTimeFormatter.ISO_DATE_TIME));
                 
@@ -79,6 +80,8 @@ public class SimulacionSemanalService {
         double distanciaTotal = 0;
         double consumoCombustible = 0;
         int averiasOcurridas = 0;
+        Map<String,String> informesTrasvases = new HashMap<>();
+
         
         // Resultados por día
         Map<Integer, Map<String, Object>> resultadosPorDia = new HashMap<>();
@@ -131,6 +134,51 @@ public class SimulacionSemanalService {
             // Avanzar al siguiente día
             fechaActual = fechaActual.plusDays(1);
         }
+
+        for (Map.Entry<Integer, Map<String, Object>> entry : resultadosPorDia.entrySet()) {
+            int dia = entry.getKey();
+            @SuppressWarnings("unchecked")
+            List<Ruta> rutasDia = (List<Ruta>) entry.getValue().getOrDefault("rutas", Collections.emptyList());
+            
+            // Para cada día, consolidar informes de trasvases
+            StringBuilder informeDia = new StringBuilder();
+            informeDia.append("# INFORME DE TRASVASES - DÍA ").append(dia).append("\n\n");
+            
+            int trasvasesTotal = 0;
+            double glpTotalTransvasado = 0.0;
+            int totalPedidosTransvasados = 0;
+            
+            for (Ruta ruta : rutasDia) {
+                List<DetalleTrasvase> trasvases = ruta.getTrasvases();
+                if (trasvases != null && !trasvases.isEmpty()) {
+                    trasvasesTotal += trasvases.size();
+                    
+                    for (DetalleTrasvase trasvase : trasvases) {
+                        glpTotalTransvasado += trasvase.getCantidadGLP();
+                        totalPedidosTransvasados += trasvase.getPedidosTransferidos().size();
+                    }
+                    
+                    informeDia.append(ruta.generarInformeTrasvases()).append("\n\n");
+                }
+            }
+            
+            if (trasvasesTotal > 0) {
+                // Agregar resumen al inicio
+                StringBuilder resumen = new StringBuilder();
+                resumen.append("## Resumen de Trasvases\n");
+                resumen.append("- Total trasvases: ").append(trasvasesTotal).append("\n");
+                resumen.append("- Total GLP transvasado: ").append(String.format("%.2f m³", glpTotalTransvasado)).append("\n");
+                resumen.append("- Total pedidos transvasados: ").append(totalPedidosTransvasados).append("\n\n");
+                
+                informeDia.insert(informeDia.indexOf("\n\n") + 2, resumen.toString());
+                
+                // Guardar informe para este día
+                informesTrasvases.put("dia_" + dia, informeDia.toString());
+            } else {
+                informeDia.append("No se realizaron trasvases en este día.\n");
+                informesTrasvases.put("dia_" + dia, informeDia.toString());
+            }
+        }
         
         // Compilar estadísticas finales
         estadisticas.put("pedidosTotales", pedidosTotales.size());
@@ -142,6 +190,7 @@ public class SimulacionSemanalService {
         estadisticas.put("consumoCombustible", consumoCombustible);
         estadisticas.put("averiasOcurridas", averiasOcurridas);
         estadisticas.put("resultadosPorDia", resultadosPorDia);
+        estadisticas.put("informesTrasvases", informesTrasvases);
         
         log.info("======== FIN DE SIMULACIÓN SEMANAL ========");
         log.info("Total pedidos: {}, Asignados: {}, Entregados: {}, Retrasados: {}", 
@@ -243,8 +292,11 @@ public class SimulacionSemanalService {
         
         // Simular entregas con posibles averías
         SimuladorEntregas simulador = new SimuladorEntregas(averiaService, dataRepository);
-        rutas = simulador.simularEntregas(rutas, fechaDia, mapa, true);
+        List<Ruta> rutasTrasvase = new ArrayList<>();
+        rutas = simulador.simularEntregas(rutas, fechaDia, mapa, true,rutasTrasvase);
         
+        
+
         // Contar averías ocurridas
         int averiasOcurridas = 0;
         for (Ruta ruta : rutas) {
@@ -280,6 +332,21 @@ public class SimulacionSemanalService {
             distanciaTotal += ruta.getDistanciaTotal();
             consumoCombustible += ruta.getConsumoCombustible();
         }
+
+        // Agregar rutas de trasvase al resultado
+        if (!rutasTrasvase.isEmpty()) {
+            log.info("Generadas {} rutas adicionales por trasvases", rutasTrasvase.size());
+            resultado.put("rutasTrasvase", rutasTrasvase);
+            
+            // Agregar las rutas de trasvase a la lista principal para incluirlas en el análisis
+            rutas.addAll(rutasTrasvase);
+            
+            // Actualizar métricas incluyendo las rutas de trasvase
+            for (Ruta ruta : rutasTrasvase) {
+                distanciaTotal += ruta.getDistanciaTotal();
+                consumoCombustible += ruta.getConsumoCombustible();
+            }
+        }
         
         // Actualizar estado de los camiones
         actualizarCamionesDespuesDeRutas(camiones, rutas);
@@ -293,6 +360,7 @@ public class SimulacionSemanalService {
         resultado.put("consumoCombustible", consumoCombustible);
         resultado.put("averiasOcurridas", averiasOcurridas);
         resultado.put("camionesEnMantenimiento", camionesEnMantenimiento);
+        resultado.put("rutasTrasvase", rutasTrasvase);
         resultado.put("fitness", algoritmo.getMejorFitness());
         
         return resultado;

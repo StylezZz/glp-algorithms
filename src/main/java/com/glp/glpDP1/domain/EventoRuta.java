@@ -12,6 +12,7 @@ public class EventoRuta {
         RECARGA_GLP,
         RECARGA_COMBUSTIBLE,
         AVERIA,
+        TRASVASE,  // Nuevo tipo de evento
         BLOQUEO,
         FIN
     }

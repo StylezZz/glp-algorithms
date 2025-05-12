@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -31,6 +32,9 @@ public class Ruta {
     private List<EventoRuta> eventos;
     private boolean requiereReabastecimiento;
     private boolean factibilidadEncontrada;
+    private List<DetalleTrasvase> trasvases;
+    private int pedidosRetrasados;
+    private double porcentajeRetrasos;
 
     private MonitoreoService monitoreoService;
 
@@ -47,7 +51,83 @@ public class Ruta {
         this.cancelada = false;
         this.eventos = new ArrayList<>();
         this.requiereReabastecimiento = false;  // NUEVO: Inicializar a false
+        this.trasvases = new ArrayList<>();
+        this.pedidosRetrasados = 0;
+        this.porcentajeRetrasos = 0.0;
+
     }
+
+    /**
+     * Agregar un detalle de trasvase a la ruta
+     *
+     */
+    public void agregarTrasvase(DetalleTrasvase trasvase){
+        if(this.trasvases == null){
+            this.trasvases = new ArrayList<>();
+        }
+        this.trasvases.add(trasvase);
+    }
+
+    /**
+     * Obtiene la lista de trasvases
+     *
+     */
+    public List<DetalleTrasvase> getTravases(){
+        if(this.trasvases == null){
+            this.trasvases = new ArrayList<>();
+        }
+        return this.trasvases;
+    }
+
+    /**
+     * Genera un informe detallado de los trasvases realizados en esta ruta
+     */
+    public String generarInformeTrasvases(){
+        if (getTrasvases().isEmpty()) {
+            return "No se realizaron trasvases en esta ruta.";
+        }
+        
+        StringBuilder informe = new StringBuilder();
+        informe.append("INFORME DE TRASVASES - Ruta ").append(id)
+               .append(" (Camión ").append(codigoCamion).append(")\n\n");
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        
+        for (int i = 0; i < trasvases.size(); i++) {
+            DetalleTrasvase t = trasvases.get(i);
+            informe.append("Trasvase #").append(i+1).append("\n");
+            informe.append("- Origen: Camión ").append(t.getCamionOrigen()).append("\n");
+            informe.append("- Destino: Camión ").append(t.getCamionDestino()).append("\n");
+            informe.append("- Ubicación: ").append(t.getUbicacion()).append("\n");
+            informe.append("- Inicio: ").append(t.getMomentoInicio().format(formatter)).append("\n");
+            informe.append("- Fin: ").append(t.getMomentoFin().format(formatter)).append("\n");
+            informe.append("- Duración: ").append(t.getDuracionMinutos()).append(" minutos\n");
+            informe.append("- Volumen GLP: ").append(String.format("%.2f m³", t.getCantidadGLP())).append("\n");
+            informe.append("- Pedidos transferidos: ").append(t.getPedidosTransferidos().size()).append("\n");
+            
+            // Detalles de cada pedido
+            informe.append("  Detalle de pedidos:\n");
+            for (Pedido p : t.getPedidosTransferidos()) {
+                informe.append("  * Cliente: ").append(p.getIdCliente())
+                       .append(", Vol: ").append(String.format("%.2f m³", p.getCantidadGLP()))
+                       .append(", Plazo: ").append(p.getHoraLimiteEntrega().format(formatter))
+                       .append("\n");
+            }
+            
+            informe.append("\n");
+        }
+        
+        return informe.toString();
+    }
+
+    /**
+     * Establece el número y porcentaje de pedidos retrasados
+     */
+    public void setEstadisticasRetrasos(int pedidosRetrasados, double porcentajeRetrasos) {
+        this.pedidosRetrasados = pedidosRetrasados;
+        this.porcentajeRetrasos = porcentajeRetrasos;
+    }
+
 
     /**
      * Añade un pedido a la ruta

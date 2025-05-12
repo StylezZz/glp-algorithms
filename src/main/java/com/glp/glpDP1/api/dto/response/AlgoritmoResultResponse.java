@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @Data
 @NoArgsConstructor
@@ -26,4 +27,31 @@ public class AlgoritmoResultResponse {
     private LocalDateTime horaInicio;
     private LocalDateTime horaFin;
     private Duration tiempoEjecucion;
+    private List<Ruta> rutasTrasvase = new ArrayList<>();
+
+    public AlgoritmoResultResponse(String id, List<Ruta> rutas, double fitness, double distanciaTotal,
+            double consumoCombustible, int pedidosEntregados, int pedidosTotales,
+            Map<String, Object> metricas, String tipoAlgoritmo, LocalDateTime horaInicio,
+            LocalDateTime horaFin, Duration tiempoEjecucion) {
+        this.id = id;
+        this.rutas = rutas;
+        this.fitness = fitness;
+        this.distanciaTotal = distanciaTotal;
+        this.consumoCombustible = consumoCombustible;
+        this.pedidosEntregados = pedidosEntregados;
+        this.pedidosTotales = pedidosTotales;
+        this.metricas = metricas;
+        this.tipoAlgoritmo = tipoAlgoritmo;
+        this.horaInicio = horaInicio;
+        this.horaFin = horaFin;
+        this.tiempoEjecucion = tiempoEjecucion;
+        this.rutasTrasvase = new ArrayList<>();
+    }
+
+    public void agregarRutaTrasvase(Ruta ruta) {
+        if (this.rutasTrasvase == null) {
+            this.rutasTrasvase = new ArrayList<>();
+        }
+        this.rutasTrasvase.add(ruta);
+    }
 }
