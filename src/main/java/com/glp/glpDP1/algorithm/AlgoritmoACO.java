@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -124,7 +125,8 @@ public class AlgoritmoACO {
         this.iteracionActual = 0;
 
         LocalDate fechaActual = momentoActual.toLocalDate();
-        mapa.filtrarBloqueosParaFecha(fechaActual);
+        LocalDate fechaFinSemana = fechaActual.plusDays(7);
+        mapa.filtrarBloqueosParaFecha(fechaActual, fechaFinSemana);
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -838,6 +840,13 @@ public class AlgoritmoACO {
 
             if (rutaHastaProxima.isEmpty()) break; // No se puede llegar
 
+            // Incorporar los nodos de rutaHastaProxima a la secuencia de nodos de la ruta
+            for (Ubicacion nodo : rutaHastaProxima) {
+                if (!ruta.getSecuenciaNodos().contains(nodo)) {
+                    ruta.getSecuenciaNodos().add(nodo);
+                }
+            }
+
             // Calcular distancia y consumo
             int distancia = 0;
             for (int i = 0; i < rutaHastaProxima.size() - 1; i++) {
@@ -861,6 +870,13 @@ public class AlgoritmoACO {
 
                 if (rutaHastaProxima.isEmpty()) {
                     break;
+                }
+
+                // Añadir los nodos de la ruta hacia el almacén cercano a la secuencia de nodos
+                for (Ubicacion nodo : rutaHastaProxima) {
+                    if (!ruta.getSecuenciaNodos().contains(nodo)) {
+                        ruta.getSecuenciaNodos().add(nodo);
+                    }
                 }
             }
 
@@ -1285,16 +1301,31 @@ public class AlgoritmoACO {
     }
 
     /**
-     * Calcula el fitness de una solución (menor es mejor)
+     * Calcula el fitness de una solución para el problema de distribución de GLP.
+     * <p>
+     * La función objetivo es:
+     * F = w₁(ConsumoTotalCombustible) + w₂(PedidosNoAsignados) + w₃(IneficienciaFlota) - w₄(BonificacionEficiencia)
+     * <p>
+     * Donde:
+     * - ConsumoTotalCombustible: Minimizar el gasto en combustible (principal preocupación de la gerencia)
+     * - PedidosNoAsignados: Garantizar la política de cero incumplimientos en las entregas
+     * - IneficienciaFlota: Promover una distribución balanceada de carga entre camiones
+     * - BonificacionEficiencia: Premiar el uso óptimo de los almacenes para recarga
+     * <p>
+     * Las ponderaciones reflejan la política de PLG: prioridad máxima a no dejar pedidos sin atender,
+     * seguido por la minimización del consumo de combustible.
+     *
+     * @param rutas         Lista de rutas a evaluar
+     * @param momentoActual Momento actual para la evaluación
+     * @return Valor del fitness (menor es mejor)
      */
     private double calcularFitness(List<Ruta> rutas, LocalDateTime momentoActual) {
         double consumoTotal = 0.0;      // Consumo total de combustible
         double distanciaTotal = 0.0;    // Distancia total recorrida
-        double retrasosTotal = 0.0;     // Suma de retrasos (en minutos)
         double pedidosNoAsignados = pedidosPendientes.size(); // Inicialmente, todos no asignados
         double sobrecargaTotal = 0.0;   // Suma de sobrecargas de GLP en camiones
-        double penalizacionAverias = 0.0; // Penalización por probabilidad de averías
         double bonificacionAlmacenPrincipal = 0.0;
+        double penalizacionDesviacion = 0.0; // Penalización por distribución desbalanceada
 
         Ubicacion ubicacionAlmacenPrincipal = mapa.obtenerAlmacenCentral().getUbicacion();
         // Conjunto de pedidos asignados
@@ -1330,6 +1361,10 @@ public class AlgoritmoACO {
                 sobrecargaTotal += (glpTotal - camion.getCapacidadTanqueGLP());
             }
 
+            // Calcular porcentaje de utilización de la capacidad del camión
+            double porcentajeUso = glpTotal / camion.getCapacidadTanqueGLP();
+            porcentajesUso.add(porcentajeUso);
+
             List<Ubicacion> nodos = ruta.getSecuenciaNodos();
             long visitasAlmacenPrincipal = nodos.stream()
                     .filter(nodo -> nodo.equals(ubicacionAlmacenPrincipal)).count();
@@ -1341,22 +1376,6 @@ public class AlgoritmoACO {
 
                 // Mayor bonificación para rutas que utilizan el reabastecimiento de manera eficiente
                 bonificacionAlmacenPrincipal += glpTotal * 0.5 * eficienciaReabastecimiento;
-            }
-
-            // Calcular retrasos potenciales
-            for (Pedido pedido : ruta.getPedidosAsignados()) {
-                // Estimar tiempo de entrega basado en distancia y velocidad
-                Ubicacion origen = camion.getUbicacionActual();
-                int distanciaAlPedido = origen.distanciaA(pedido.getUbicacion());
-                double horasViaje = distanciaAlPedido / 50.0; // 50 km/h velocidad promedio
-
-                LocalDateTime entregaEstimada = momentoActual.plusMinutes((long) (horasViaje * 60));
-
-                // Si entrega estimada es posterior a la hora límite, hay retraso
-                if (entregaEstimada.isAfter(pedido.getHoraLimiteEntrega())) {
-                    Duration retraso = Duration.between(pedido.getHoraLimiteEntrega(), entregaEstimada);
-                    retrasosTotal += retraso.toMinutes();
-                }
             }
         }
 
@@ -1373,21 +1392,19 @@ public class AlgoritmoACO {
         }
         pedidosNoAsignados = idsBasePendientes.size();
 
-        double penalizacionDesviacion = 0;
+        // Calcular penalización por desbalance de carga entre camiones
         if (porcentajesUso.size() > 1) {
             double media = porcentajesUso.stream().mapToDouble(d -> d).average().orElse(0);
             double sumaCuadrados = porcentajesUso.stream().mapToDouble(p -> Math.pow(p - media, 2)).sum();
             double desviacionCarga = Math.sqrt(sumaCuadrados / porcentajesUso.size());
-            penalizacionDesviacion = desviacionCarga * 500;  // Factor de penalización ajustable
+            penalizacionDesviacion = desviacionCarga * 500;  // Factor de penalización por desbalance
         }
 
-        // Calcular fitness final (ponderado) con mayor penalización por pedidos no asignados
-        double fitness = 0.02 * distanciaTotal +
-                0.03 * retrasosTotal +
-                0.80 * (pedidosNoAsignados * 1000) +  // AUMENTAR significativamente la penalización
-                0.03 * (sobrecargaTotal * 1000) +     // Reducir penalización por sobrecarga
-                0.02 * penalizacionAverias -
-                0.05 * bonificacionAlmacenPrincipal;       // Reducir penalización por averías
+        // Calcular fitness final (ponderado) según nuestra función objetivo
+        double fitness = 0.15 * consumoTotal +
+                0.80 * (pedidosNoAsignados * 1000) +
+                0.03 * penalizacionDesviacion -
+                0.02 * bonificacionAlmacenPrincipal;
 
         return fitness;
     }

@@ -424,26 +424,34 @@ public class Mapa {
      * @param fecha Fecha para filtrar los bloqueos
      * @return Lista de bloqueos que aplican para esa fecha
      */
-    public void filtrarBloqueosParaFecha(LocalDate fecha) {
+    public void filtrarBloqueosParaFecha(LocalDate fechaInicio, LocalDate fechaFin) {
         if (bloqueos == null || bloqueos.isEmpty()) {
             bloqueosFiltrados = Collections.emptyList();
             return;
         }
 
         bloqueosFiltrados = new ArrayList<>();
-
         for (Bloqueo bloqueo : bloqueos) {
-            LocalDate fechaInicio = bloqueo.getHoraInicio().toLocalDate();
-            LocalDate fechaFin = bloqueo.getHoraFin().toLocalDate();
+            LocalDate inicio = bloqueo.getHoraInicio().toLocalDate();
+            LocalDate fin = bloqueo.getHoraFin().toLocalDate();
 
-            // Si el día actual está entre la fecha de inicio y fin del bloqueo, incluirlo
-            if (!fecha.isBefore(fechaInicio) && !fecha.isAfter(fechaFin)) {
-                bloqueosFiltrados.add(bloqueo);
+            boolean cond1 = fechaInicio == null || (!inicio.isAfter(fechaInicio) && !fin.isBefore(fechaInicio));
+            boolean cond2 = fechaFin == null || (!inicio.isAfter(fechaFin) && !fin.isBefore(fechaFin));
+
+            // Si solo hay fechaInicio, filtra por esa fecha
+            if (fechaFin == null) {
+                if ((fechaInicio.isEqual(inicio) || fechaInicio.isAfter(inicio)) &&
+                        (fechaInicio.isEqual(fin) || fechaInicio.isBefore(fin))) {
+                    bloqueosFiltrados.add(bloqueo);
+                }
+            } else {
+                // Si hay rango, verifica si hay intersección de rangos
+                if (!(fin.isBefore(fechaInicio) || inicio.isAfter(fechaFin))) {
+                    bloqueosFiltrados.add(bloqueo);
+                }
             }
         }
-
-        System.out.println("Bloqueos filtrados para fecha " + fecha + ": " +
-                bloqueosFiltrados.size() + " de " + bloqueos.size() + " totales");
+        System.out.println("Bloqueos filtrados para rango " + fechaInicio + " - " + fechaFin + ": " + bloqueosFiltrados.size());
     }
 
     /**

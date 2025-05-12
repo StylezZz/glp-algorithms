@@ -76,19 +76,11 @@ public class Pedido {
         return horaRecepcion.plus(tiempoLimiteEntrega);
     }
 
-    public void setHoraEntregaProgramada(LocalDateTime horaEntregaProgramada) {
-        this.horaEntregaProgramada = horaEntregaProgramada;
-    }
-
     public void setHoraEntregaReal(LocalDateTime horaEntregaReal) {
         this.horaEntregaReal = horaEntregaReal;
         if (horaEntregaReal != null) {
             this.entregado = true;
         }
-    }
-
-    public void setCamionAsignado(String camionAsignado) {
-        this.camionAsignado = camionAsignado;
     }
 
     /**

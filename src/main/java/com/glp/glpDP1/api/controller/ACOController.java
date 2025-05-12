@@ -53,8 +53,10 @@ public class ACOController {
             Mapa mapa = dataRepositoryImpl.obtenerMapa();
 
             // Si no se especificó momento actual, usar el actual
-            LocalDateTime momentoActual = request.getMomentoActual() != null ?
-                    request.getMomentoActual() : LocalDateTime.now();
+            if (request.getMomentoActual() == null)
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Argumentos incorrectos");
+
+            LocalDateTime momentoActual = request.getMomentoActual();
 
             // Convertir escenario
             EscenarioSimulacion escenario;
@@ -87,85 +89,6 @@ public class ACOController {
         } catch (Exception e) {
             log.error("Error al iniciar algoritmo ACO: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar el algoritmo", e);
-        }
-    }
-
-    /**
-     * Inicia una ejecución del algoritmo ACO con parámetros optimizados
-     */
-    @PostMapping("/start-optimized")
-    public ResponseEntity<String> iniciarACOOptimizado() {
-        try {
-            log.info("Iniciando algoritmo ACO con parámetros optimizados");
-
-            // Obtener datos del repositorio
-            List<Camion> camiones = dataRepositoryImpl.obtenerCamiones();
-            List<Pedido> pedidos = dataRepositoryImpl.obtenerPedidos();
-            Mapa mapa = dataRepositoryImpl.obtenerMapa();
-
-            // Iniciar algoritmo con parámetros optimizados
-            String id = acoService.ejecutarACOOptimizado(
-                    camiones,
-                    pedidos,
-                    mapa,
-                    LocalDateTime.now(),
-                    EscenarioSimulacion.DIA_A_DIA
-            );
-
-            return ResponseEntity.ok(id);
-        } catch (Exception e) {
-            log.error("Error al iniciar algoritmo ACO optimizado: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
-        }
-    }
-
-    /**
-     * Inicia múltiples ejecuciones del algoritmo ACO y devuelve la mejor solución
-     */
-    @PostMapping("/start-multiple")
-    public ResponseEntity<Map<String, Object>> iniciarMultipleACO(
-            @RequestBody ACORequest request,
-            @RequestParam(defaultValue = "10") int numEjecuciones) {
-
-        try {
-            log.info("Iniciando múltiples ejecuciones de algoritmo ACO: {}", numEjecuciones);
-
-            // Obtener datos del repositorio
-            List<Camion> camiones = dataRepositoryImpl.obtenerCamiones();
-            List<Pedido> pedidos = dataRepositoryImpl.obtenerPedidos();
-            Mapa mapa = dataRepositoryImpl.obtenerMapa();
-
-            // Si no se especificó momento actual, usar el actual
-            LocalDateTime momentoActual = request.getMomentoActual() != null ?
-                    request.getMomentoActual() : LocalDateTime.now();
-
-            // Convertir escenario
-            EscenarioSimulacion escenario = null;
-            if (request.getEscenario() != null) {
-                try {
-                    escenario = EscenarioSimulacion.valueOf(request.getEscenario());
-                } catch (IllegalArgumentException e) {
-                    escenario = EscenarioSimulacion.DIA_A_DIA;
-                }
-            } else {
-                escenario = EscenarioSimulacion.DIA_A_DIA;
-            }
-
-            // Ejecutar múltiples veces y obtener la mejor solución
-            Map<String, Object> resultado = acoService.ejecutarMultipleACO(
-                    camiones,
-                    pedidos,
-                    mapa,
-                    momentoActual,
-                    escenario,
-                    numEjecuciones
-            );
-
-            return ResponseEntity.ok(resultado);
-        } catch (Exception e) {
-            log.error("Error al ejecutar ACO múltiple: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al ejecutar optimización múltiple", e);
         }
     }
 
