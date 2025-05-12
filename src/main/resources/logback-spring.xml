@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Definir el patrón de cómo se verán los logs -->
+    <property name="LOG_PATTERN" 
+              value="%date{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"/>
+    
+    <!-- Definir dónde se guardarán los logs -->
+    <property name="LOG_FILE" value="logs/glp-application.log"/>
+    
+    <!-- Configuración para la consola (seguirá mostrando logs en la consola) -->
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Configuración para el archivo de logs -->
+    <appender name="File" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        
+        <!-- Política de rotación de archivos: un archivo por día -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Cada día se crea un nuevo archivo -->
+            <fileNamePattern>logs/archived/glp-application.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- Tamaño máximo por archivo: 10MB -->
+            <maxFileSize>10MB</maxFileSize>
+            <!-- Conservar logs de los últimos 30 días -->
+            <maxHistory>30</maxHistory>
+            <!-- Tamaño total máximo de todos los archivos: 1GB -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    
+    <!-- Definir el nivel de log para la aplicación -->
+    <logger name="com.glp" level="DEBUG"/>
+    
+    <!-- Log todo a partir de nivel INFO -->
+    <root level="INFO">
+        <appender-ref ref="Console"/>
+        <appender-ref ref="File"/>
+    </root>
+</configuration>
