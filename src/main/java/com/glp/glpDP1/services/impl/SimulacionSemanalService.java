@@ -19,7 +19,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Servicio para ejecutar la simulación semanal
+ * Servicio mejorado para ejecutar la simulación semanal con datos estructurados para visualización
  */
 @Service
 @Slf4j
@@ -37,13 +37,13 @@ public class SimulacionSemanalService {
     }
 
     /**
-     * Ejecuta la simulación semanal (7 días)
-     * 
+     * Ejecuta la simulación semanal (7 días) con datos estructurados para visualización
+     *
      * @param camionesIniciales Lista de camiones disponibles al inicio
      * @param pedidosTotales    Lista de todos los pedidos para la semana
      * @param mapa              Mapa de la ciudad
      * @param fechaInicio       Fecha de inicio de la simulación
-     * @return Resultados de la simulación
+     * @return Resultados de la simulación estructurados para el frontend
      */
     public Map<String, Object> ejecutarSimulacionSemanal(
             List<Camion> camionesIniciales,
@@ -57,15 +57,8 @@ public class SimulacionSemanalService {
         log.info("Iniciando simulación semanal desde {}",
                 fechaInicio.format(DateTimeFormatter.ISO_DATE_TIME));
 
-        // Validar camiones
-        if (camionesIniciales == null || camionesIniciales.isEmpty()) {
-            throw new IllegalArgumentException("No hay camiones disponibles para la simulación");
-        }
-
-        // Validar pedidos
-        if (pedidosTotales == null || pedidosTotales.isEmpty()) {
-            throw new IllegalArgumentException("No hay pedidos para simular");
-        }
+        // Validar entrada
+        validarParametrosEntrada(camionesIniciales, pedidosTotales, mapa);
 
         // Clonar camiones para no modificar los originales
         List<Camion> camiones = clonarCamiones(camionesIniciales);
@@ -75,27 +68,8 @@ public class SimulacionSemanalService {
                 .sorted(Comparator.comparing(Pedido::getHoraRecepcion))
                 .collect(Collectors.toList());
 
-        // Variables para estadísticas
-        Map<String, Object> estadisticas = new HashMap<>();
-        int pedidosAsignados = 0;
-        int pedidosEntregados = 0;
-        int pedidosRetrasados = 0;
-        double distanciaTotal = 0;
-        double consumoCombustible = 0;
-        int averiasOcurridas = 0;
-
-        // Variables para métricas de fitness
-        double fitnessSemanalAcumulado = 0.0;
-        double fitnessSemanalMejor = Double.MAX_VALUE;
-        double fitnessSemanalPeor = 0.0;
-        List<Double> fitnessValoresDiarios = new ArrayList<>();
-
-        // Variables para tiempos de ejecución por día
-        Map<Integer, Long> tiempoEjecucionPorDia = new HashMap<>();
-        long tiempoTotalAlgoritmosMs = 0;
-
-        // Resultados por día
-        Map<Integer, Map<String, Object>> resultadosPorDia = new HashMap<>();
+        // Inicializar contenedores de resultados
+        ResultadosSimulacion resultados = inicializarResultados(fechaInicio);
 
         // Simulación día a día
         LocalDateTime fechaActual = fechaInicio;
@@ -106,176 +80,259 @@ public class SimulacionSemanalService {
             log.info("==================================================");
             log.info("SIMULANDO DÍA {}: {}", diaActual, fechaActual.toLocalDate());
 
-            // Medir tiempo de inicio del algoritmo diario
-            long tiempoInicioDiaMs = System.currentTimeMillis();
+            // Procesar día
+            ResultadoDia resultadoDia = procesarDia(
+                    diaActual, fechaActual, camiones, pedidosOrdenados, mapa, resultados);
 
-            // Actualizar estado de camiones (mantenimiento, averías, etc.)
-            actualizarEstadoCamiones(camiones, fechaActual);
-            imprimirEstadoFlota(camiones);
+            // Almacenar resultados del día
+            resultados.resultadosPorDia.put(diaActual, resultadoDia);
 
-            // Filtrar pedidos para el día actual
-            List<Pedido> pedidosDia = filtrarPedidosDia(pedidosOrdenados, fechaActual);
-
-            if (!pedidosDia.isEmpty()) {
-                log.info("Pedidos para hoy: {}", pedidosDia.size());
-
-                // Ejecutar el algoritmo genético para el día
-                Map<String, Object> resultadoDia = ejecutarAlgoritmoDia(
-                        camiones, pedidosDia, mapa, fechaActual);
-
-                // Actualizar estadísticas
-                pedidosAsignados += (int) resultadoDia.getOrDefault("pedidosAsignados", 0);
-                pedidosEntregados += (int) resultadoDia.getOrDefault("pedidosEntregados", 0);
-                pedidosRetrasados += (int) resultadoDia.getOrDefault("pedidosRetrasados", 0);
-                distanciaTotal += (double) resultadoDia.getOrDefault("distanciaTotal", 0.0);
-                consumoCombustible += (double) resultadoDia.getOrDefault("consumoCombustible", 0.0);
-                averiasOcurridas += (int) resultadoDia.getOrDefault("averiasOcurridas", 0);
-
-                // Actualizar métricas de fitness
-                if (resultadoDia.containsKey("fitness")) {
-                    double fitnessDia = (double) resultadoDia.get("fitness");
-
-                    // Actualizar fitness acumulado
-                    fitnessSemanalAcumulado += fitnessDia;
-
-                    // Actualizar mejor fitness (menor valor es mejor)
-                    if (fitnessDia < fitnessSemanalMejor) {
-                        fitnessSemanalMejor = fitnessDia;
-                    }
-
-                    // Actualizar peor fitness
-                    if (fitnessDia > fitnessSemanalPeor) {
-                        fitnessSemanalPeor = fitnessDia;
-                    }
-
-                    // Agregar a la lista de valores diarios
-                    fitnessValoresDiarios.add(fitnessDia);
-                }
-
-                // Medir tiempo de fin del algoritmo diario
-                long tiempoFinDiaMs = System.currentTimeMillis();
-                long duracionDiaMs = tiempoFinDiaMs - tiempoInicioDiaMs;
-
-                // Guardar tiempo de ejecución del día
-                tiempoEjecucionPorDia.put(diaActual, duracionDiaMs);
-                tiempoTotalAlgoritmosMs += duracionDiaMs;
-
-                // Añadir tiempo de ejecución al resultado del día
-                resultadoDia.put("tiempoEjecucionMs", duracionDiaMs);
-
-                // Guardar resultados del día
-                resultadosPorDia.put(diaActual, resultadoDia);
-
-                log.info(
-                        "Día {}: {} pedidos asignados, {} entregados, {} retrasados, {} averías, fitness: {}, tiempo: {} ms",
-                        diaActual,
-                        resultadoDia.getOrDefault("pedidosAsignados", 0),
-                        resultadoDia.getOrDefault("pedidosEntregados", 0),
-                        resultadoDia.getOrDefault("pedidosRetrasados", 0),
-                        resultadoDia.getOrDefault("averiasOcurridas", 0),
-                        resultadoDia.containsKey("fitness") ? resultadoDia.get("fitness") : "N/A",
-                        duracionDiaMs);
-            } else {
-                log.info("No hay pedidos para el día de hoy");
-                // Guardar tiempo de ejecución vacío
-                tiempoEjecucionPorDia.put(diaActual, 0L);
-            }
+            // Actualizar estadísticas acumuladas
+            actualizarEstadisticasAcumuladas(resultados, resultadoDia);
 
             // Avanzar al siguiente día
             fechaActual = fechaActual.plusDays(1);
             diaActual++;
         }
 
-        // Calcular fitness promedio semanal
-        double fitnessSemanalPromedio = fitnessValoresDiarios.isEmpty() ? 0.0
-                : fitnessValoresDiarios.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        // Calcular métricas finales
+        calcularMetricasFinales(resultados, tiempoInicioMs);
 
-        // Calcular fitness ponderado (fitness/pedido entregado)
-        double fitnessPorPedido = pedidosEntregados > 0 ? fitnessSemanalAcumulado / pedidosEntregados : 0.0;
-
-        // Medir tiempo de fin de la simulación completa
-        long tiempoFinMs = System.currentTimeMillis();
-        long tiempoTotalSimulacionMs = tiempoFinMs - tiempoInicioMs;
-
-        // Calcular tiempos y porcentajes
-        Map<String, Object> metricas_tiempo = new HashMap<>();
-        metricas_tiempo.put("tiempoTotalSimulacionMs", tiempoTotalSimulacionMs);
-        metricas_tiempo.put("tiempoTotalAlgoritmosMs", tiempoTotalAlgoritmosMs);
-        metricas_tiempo.put("tiempoPromedioEjecucionDiariaMs", tiempoTotalAlgoritmosMs / 7); // Promedio por día
-        metricas_tiempo.put("tiempoOverheadMs", tiempoTotalSimulacionMs - tiempoTotalAlgoritmosMs); // Overhead fuera de
-                                                                                                    // los algoritmos
-        metricas_tiempo.put("tiempoPorDiaMs", tiempoEjecucionPorDia);
-
-        // Registrar máximos y mínimos
-        long tiempoMaximoDiaMs = tiempoEjecucionPorDia.values().stream().mapToLong(Long::longValue).max().orElse(0);
-        long tiempoMinimoDiaMs = tiempoEjecucionPorDia.values().stream()
-                .filter(tiempo -> tiempo > 0) // Excluir días sin pedidos
-                .mapToLong(Long::longValue).min().orElse(0);
-        metricas_tiempo.put("diaMasRapidoMs", tiempoMinimoDiaMs);
-        metricas_tiempo.put("diaMasLentoMs", tiempoMaximoDiaMs);
-
-        // Día con mayor carga de trabajo
-        Optional<Map.Entry<Integer, Long>> diaMaximo = tiempoEjecucionPorDia.entrySet().stream()
-                .max(Map.Entry.comparingByValue());
-        if (diaMaximo.isPresent()) {
-            metricas_tiempo.put("diaMayorCarga", diaMaximo.get().getKey());
-            metricas_tiempo.put("tiempoDiaMayorCargaMs", diaMaximo.get().getValue());
-        }
-
-        // Compilar estadísticas finales
-        estadisticas.put("pedidosTotales", pedidosTotales.size());
-        estadisticas.put("pedidosAsignados", pedidosAsignados);
-        estadisticas.put("pedidosEntregados", pedidosEntregados);
-        estadisticas.put("pedidosRetrasados", pedidosRetrasados);
-        estadisticas.put("porcentajeEntrega", (double) pedidosEntregados / pedidosTotales.size() * 100);
-        estadisticas.put("distanciaTotal", distanciaTotal);
-        estadisticas.put("consumoCombustible", consumoCombustible);
-        estadisticas.put("averiasOcurridas", averiasOcurridas);
-
-        // Agregar métricas de fitness
-        Map<String, Object> metricasFitness = new HashMap<>();
-        metricasFitness.put("fitnessSemanalAcumulado", fitnessSemanalAcumulado);
-        metricasFitness.put("fitnessSemanalPromedio", fitnessSemanalPromedio);
-        metricasFitness.put("fitnessSemanalMejor", fitnessSemanalMejor);
-        metricasFitness.put("fitnessSemanalPeor", fitnessSemanalPeor);
-        metricasFitness.put("fitnessPorPedido", fitnessPorPedido);
-        metricasFitness.put("fitnessValoresDiarios", fitnessValoresDiarios);
-
-        estadisticas.put("fitness", metricasFitness);
-        estadisticas.put("resultadosPorDia", resultadosPorDia);
-        estadisticas.put("tiempoEjecucion", metricas_tiempo);
-
-        // Agregar indicador general de calidad de la solución semanal
-        // Combinación de porcentaje de entrega y fitness
-        double porcentajeEntrega = (double) pedidosEntregados / pedidosTotales.size() * 100;
-        double calidadSolucion = pedidosTotales.isEmpty() ? 0.0
-                : (porcentajeEntrega * 0.7) - (fitnessSemanalPromedio / pedidosTotales.size() * 0.3);
-
-        estadisticas.put("calidadSolucionSemanal", calidadSolucion);
-
-        // Calcular eficiencia en tiempo-costo-demanda
-        double eficienciaTiempo = tiempoTotalAlgoritmosMs > 0
-                ? (double) pedidosEntregados / tiempoTotalAlgoritmosMs * 1000
-                : 0; // Pedidos entregados por segundo
-        estadisticas.put("eficienciaTiempo", eficienciaTiempo);
-
-        log.info("======== FIN DE SIMULACIÓN SEMANAL ========");
-        log.info("Total pedidos: {}, Asignados: {}, Entregados: {}, Retrasados: {}",
-                pedidosTotales.size(), pedidosAsignados, pedidosEntregados, pedidosRetrasados);
-        log.info("Distancia total: {:.2f} km, Consumo: {:.2f} gal, Averías: {}",
-                distanciaTotal, consumoCombustible, averiasOcurridas);
-        log.info("Fitness semanal - Acumulado: {:.2f}, Promedio: {:.2f}, Mejor: {:.2f}, Peor: {:.2f}",
-                fitnessSemanalAcumulado, fitnessSemanalPromedio, fitnessSemanalMejor, fitnessSemanalPeor);
-        log.info("Tiempo total de simulación: {} ms, Tiempo algoritmos: {} ms",
-                tiempoTotalSimulacionMs, tiempoTotalAlgoritmosMs);
-        log.info("Calidad general de la solución semanal: {:.2f}", calidadSolucion);
-
-        return estadisticas;
+        // Estructurar respuesta para el frontend
+        return estructurarRespuestaCompleta(resultados, mapa, camionesIniciales);
     }
 
-    /**
-     * Imprime el estado actual de la flota de camiones
-     */
+    private void validarParametrosEntrada(List<Camion> camiones, List<Pedido> pedidos, Mapa mapa) {
+        if (camiones == null || camiones.isEmpty()) {
+            throw new IllegalArgumentException("No hay camiones disponibles para la simulación");
+        }
+        if (pedidos == null || pedidos.isEmpty()) {
+            throw new IllegalArgumentException("No hay pedidos para simular");
+        }
+        if (mapa == null) {
+            throw new IllegalArgumentException("No hay mapa configurado");
+        }
+    }
+
+    private ResultadosSimulacion inicializarResultados(LocalDateTime fechaInicio) {
+        ResultadosSimulacion resultados = new ResultadosSimulacion();
+        resultados.fechaInicio = fechaInicio;
+        resultados.fechaFin = fechaInicio.plusDays(7);
+        resultados.resultadosPorDia = new HashMap<>();
+        resultados.fitnessValoresDiarios = new ArrayList<>();
+        resultados.tiempoEjecucionPorDia = new HashMap<>();
+        return resultados;
+    }
+
+    private ResultadoDia procesarDia(int numeroDia, LocalDateTime fechaDia, List<Camion> camiones,
+                                     List<Pedido> pedidosOrdenados, Mapa mapa, ResultadosSimulacion resultados) {
+
+        long tiempoInicioDiaMs = System.currentTimeMillis();
+
+        // Actualizar estado de camiones
+        actualizarEstadoCamiones(camiones, fechaDia);
+        imprimirEstadoFlota(camiones);
+
+        // Filtrar pedidos para el día actual
+        List<Pedido> pedidosDia = filtrarPedidosDia(pedidosOrdenados, fechaDia);
+
+        ResultadoDia resultadoDia = new ResultadoDia();
+        resultadoDia.numeroDia = numeroDia;
+        resultadoDia.fecha = fechaDia;
+        resultadoDia.pedidosDia = pedidosDia.size();
+
+        if (!pedidosDia.isEmpty()) {
+            log.info("Pedidos para hoy: {}", pedidosDia.size());
+
+            // Ejecutar algoritmo genético
+            Map<String, Object> resultadoAlgoritmo = ejecutarAlgoritmoDia(camiones, pedidosDia, mapa, fechaDia);
+
+            // Estructurar datos del día
+            estructurarResultadoDia(resultadoDia, resultadoAlgoritmo);
+
+            // Actualizar estado de camiones después de las rutas
+            actualizarCamionesDespuesDeRutas(camiones, resultadoDia.rutas);
+        } else {
+            log.info("No hay pedidos para el día de hoy");
+            resultadoDia.rutas = new ArrayList<>();
+        }
+
+        // Calcular tiempo de ejecución
+        long tiempoFinDiaMs = System.currentTimeMillis();
+        resultadoDia.tiempoEjecucionMs = tiempoFinDiaMs - tiempoInicioDiaMs;
+        resultados.tiempoEjecucionPorDia.put(numeroDia, resultadoDia.tiempoEjecucionMs);
+
+        log.info("Día {}: {} pedidos procesados, {} rutas generadas, tiempo: {} ms",
+                numeroDia, pedidosDia.size(), resultadoDia.rutas.size(), resultadoDia.tiempoEjecucionMs);
+
+        return resultadoDia;
+    }
+
+    private void estructurarResultadoDia(ResultadoDia resultadoDia, Map<String, Object> resultadoAlgoritmo) {
+        resultadoDia.rutas = (List<Ruta>) resultadoAlgoritmo.getOrDefault("rutas", new ArrayList<>());
+        resultadoDia.pedidosAsignados = (int) resultadoAlgoritmo.getOrDefault("pedidosAsignados", 0);
+        resultadoDia.pedidosEntregados = (int) resultadoAlgoritmo.getOrDefault("pedidosEntregados", 0);
+        resultadoDia.pedidosRetrasados = (int) resultadoAlgoritmo.getOrDefault("pedidosRetrasados", 0);
+        resultadoDia.distanciaTotal = (double) resultadoAlgoritmo.getOrDefault("distanciaTotal", 0.0);
+        resultadoDia.consumoCombustible = (double) resultadoAlgoritmo.getOrDefault("consumoCombustible", 0.0);
+        resultadoDia.averiasOcurridas = (int) resultadoAlgoritmo.getOrDefault("averiasOcurridas", 0);
+        resultadoDia.fitness = (double) resultadoAlgoritmo.getOrDefault("fitness", 0.0);
+        resultadoDia.camionesEnMantenimiento = (List<String>) resultadoAlgoritmo.getOrDefault("camionesEnMantenimiento", new ArrayList<>());
+
+        // Calcular camiones con averías programadas
+        resultadoDia.camionesConAverias = calcularCamionesConAverias(resultadoDia.fecha);
+    }
+
+    private List<String> calcularCamionesConAverias(LocalDateTime fecha) {
+        List<String> camionesConAverias = new ArrayList<>();
+
+        if (averiaService != null && dataRepository != null) {
+            List<Camion> camiones = dataRepository.obtenerCamiones();
+
+            for (Camion camion : camiones) {
+                for (Turno turno : Turno.values()) {
+                    LocalDateTime momentoTurno = fecha.withHour(turno.getHoraInicio() + 1);
+                    if (averiaService.tieneProgramadaAveria(camion.getCodigo(), momentoTurno)) {
+                        TipoIncidente tipo = averiaService.obtenerIncidenteProgramado(camion.getCodigo(), turno);
+                        camionesConAverias.add(camion.getCodigo() + " (" + turno + ", " + tipo + ")");
+                    }
+                }
+            }
+        }
+
+        return camionesConAverias;
+    }
+
+    private void actualizarEstadisticasAcumuladas(ResultadosSimulacion resultados, ResultadoDia resultadoDia) {
+        resultados.pedidosAsignados += resultadoDia.pedidosAsignados;
+        resultados.pedidosEntregados += resultadoDia.pedidosEntregados;
+        resultados.pedidosRetrasados += resultadoDia.pedidosRetrasados;
+        resultados.distanciaTotal += resultadoDia.distanciaTotal;
+        resultados.consumoCombustible += resultadoDia.consumoCombustible;
+        resultados.averiasOcurridas += resultadoDia.averiasOcurridas;
+
+        // Métricas de fitness
+        if (resultadoDia.fitness > 0) {
+            resultados.fitnessValoresDiarios.add(resultadoDia.fitness);
+            resultados.fitnessSemanalAcumulado += resultadoDia.fitness;
+
+            if (resultadoDia.fitness < resultados.fitnessSemanalMejor) {
+                resultados.fitnessSemanalMejor = resultadoDia.fitness;
+            }
+            if (resultadoDia.fitness > resultados.fitnessSemanalPeor) {
+                resultados.fitnessSemanalPeor = resultadoDia.fitness;
+            }
+        }
+    }
+
+    private void calcularMetricasFinales(ResultadosSimulacion resultados, long tiempoInicioMs) {
+        long tiempoTotalMs = System.currentTimeMillis() - tiempoInicioMs;
+        long tiempoAlgoritmosMs = resultados.tiempoEjecucionPorDia.values().stream().mapToLong(Long::longValue).sum();
+
+        resultados.tiempoTotalSimulacionMs = tiempoTotalMs;
+        resultados.tiempoTotalAlgoritmosMs = tiempoAlgoritmosMs;
+
+        // Calcular fitness promedio
+        if (!resultados.fitnessValoresDiarios.isEmpty()) {
+            resultados.fitnessSemanalPromedio = resultados.fitnessValoresDiarios.stream()
+                    .mapToDouble(Double::doubleValue).average().orElse(0.0);
+        }
+
+        // Calcular otras métricas
+        int pedidosTotales = resultados.resultadosPorDia.values().stream()
+                .mapToInt(dia -> dia.pedidosDia).sum();
+
+        resultados.pedidosTotales = pedidosTotales;
+        resultados.porcentajeEntrega = pedidosTotales > 0 ?
+                (double) resultados.pedidosEntregados / pedidosTotales * 100 : 0.0;
+
+        resultados.eficienciaTiempo = tiempoAlgoritmosMs > 0 ?
+                (double) resultados.pedidosEntregados / tiempoAlgoritmosMs * 1000 : 0.0;
+
+        resultados.calidadSolucionSemanal = calcularCalidadSolucion(resultados);
+
+        log.info("======== FIN DE SIMULACIÓN SEMANAL ========");
+        log.info("Métricas finales calculadas - Fitness promedio: {:.2f}, Calidad: {:.2f}",
+                resultados.fitnessSemanalPromedio, resultados.calidadSolucionSemanal);
+    }
+
+    private double calcularCalidadSolucion(ResultadosSimulacion resultados) {
+        double porcentajeEntrega = resultados.porcentajeEntrega;
+        double fitnessPorPedido = resultados.pedidosEntregados > 0 ?
+                resultados.fitnessSemanalAcumulado / resultados.pedidosEntregados : 0.0;
+
+        return (porcentajeEntrega * 0.7) - (fitnessPorPedido / 1000 * 0.3);
+    }
+
+    private Map<String, Object> estructurarRespuestaCompleta(ResultadosSimulacion resultados, Mapa mapa, List<Camion> camionesIniciales) {
+        Map<String, Object> respuesta = new HashMap<>();
+
+        // Información básica
+        respuesta.put("fechaInicio", resultados.fechaInicio);
+        respuesta.put("fechaFin", resultados.fechaFin);
+        respuesta.put("duracionSimulacion", "7 días");
+
+        // Estadísticas generales
+        respuesta.put("pedidosTotales", resultados.pedidosTotales);
+        respuesta.put("pedidosAsignados", resultados.pedidosAsignados);
+        respuesta.put("pedidosEntregados", resultados.pedidosEntregados);
+        respuesta.put("pedidosRetrasados", resultados.pedidosRetrasados);
+        respuesta.put("porcentajeEntrega", resultados.porcentajeEntrega);
+        respuesta.put("distanciaTotal", resultados.distanciaTotal);
+        respuesta.put("consumoCombustible", resultados.consumoCombustible);
+        respuesta.put("averiasOcurridas", resultados.averiasOcurridas);
+        respuesta.put("calidadSolucionSemanal", resultados.calidadSolucionSemanal);
+
+        // Métricas de fitness
+        Map<String, Object> metricasFitness = new HashMap<>();
+        metricasFitness.put("fitnessSemanalAcumulado", resultados.fitnessSemanalAcumulado);
+        metricasFitness.put("fitnessSemanalPromedio", resultados.fitnessSemanalPromedio);
+        metricasFitness.put("fitnessSemanalMejor", resultados.fitnessSemanalMejor);
+        metricasFitness.put("fitnessSemanalPeor", resultados.fitnessSemanalPeor);
+        metricasFitness.put("fitnessValoresDiarios", resultados.fitnessValoresDiarios);
+        respuesta.put("fitness", metricasFitness);
+
+        // Métricas de tiempo
+        Map<String, Object> metricas_tiempo = new HashMap<>();
+        metricas_tiempo.put("tiempoTotalSimulacionMs", resultados.tiempoTotalSimulacionMs);
+        metricas_tiempo.put("tiempoTotalAlgoritmosMs", resultados.tiempoTotalAlgoritmosMs);
+        metricas_tiempo.put("tiempoPromedioEjecucionDiariaMs", resultados.tiempoTotalAlgoritmosMs / 7);
+        metricas_tiempo.put("tiempoPorDiaMs", resultados.tiempoEjecucionPorDia);
+        respuesta.put("tiempoEjecucion", metricas_tiempo);
+
+        // Eficiencia
+        respuesta.put("eficienciaTiempo", resultados.eficienciaTiempo);
+
+        // Resultados por día (convertidos a Map para JSON)
+        Map<Integer, Map<String, Object>> resultadosPorDiaMap = new HashMap<>();
+        for (Map.Entry<Integer, ResultadoDia> entry : resultados.resultadosPorDia.entrySet()) {
+            resultadosPorDiaMap.put(entry.getKey(), convertirResultadoDiaAMap(entry.getValue()));
+        }
+        respuesta.put("resultadosPorDia", resultadosPorDiaMap);
+
+        return respuesta;
+    }
+
+    private Map<String, Object> convertirResultadoDiaAMap(ResultadoDia resultadoDia) {
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("numeroDia", resultadoDia.numeroDia);
+        mapa.put("fecha", resultadoDia.fecha);
+        mapa.put("pedidosDia", resultadoDia.pedidosDia);
+        mapa.put("rutas", resultadoDia.rutas);
+        mapa.put("pedidosAsignados", resultadoDia.pedidosAsignados);
+        mapa.put("pedidosEntregados", resultadoDia.pedidosEntregados);
+        mapa.put("pedidosRetrasados", resultadoDia.pedidosRetrasados);
+        mapa.put("distanciaTotal", resultadoDia.distanciaTotal);
+        mapa.put("consumoCombustible", resultadoDia.consumoCombustible);
+        mapa.put("averiasOcurridas", resultadoDia.averiasOcurridas);
+        mapa.put("fitness", resultadoDia.fitness);
+        mapa.put("tiempoEjecucionMs", resultadoDia.tiempoEjecucionMs);
+        mapa.put("camionesEnMantenimiento", resultadoDia.camionesEnMantenimiento);
+        mapa.put("camionesConAverias", resultadoDia.camionesConAverias);
+        return mapa;
+    }
+
+    // Métodos auxiliares existentes (sin cambios significativos)
     private void imprimirEstadoFlota(List<Camion> camiones) {
         Map<EstadoCamion, List<String>> estadoCamiones = new HashMap<>();
 
@@ -298,9 +355,6 @@ public class SimulacionSemanalService {
         log.info("Estado de flota: {}/{} disponibles", disponibles, camiones.size());
     }
 
-    /**
-     * Ejecuta el algoritmo para un día específico
-     */
     private Map<String, Object> ejecutarAlgoritmoDia(
             List<Camion> camiones,
             List<Pedido> pedidosDia,
@@ -316,7 +370,7 @@ public class SimulacionSemanalService {
 
         log.info("Camiones disponibles: {}/{}", camionesDisponibles.size(), camiones.size());
 
-        // Mostrar detalle de camiones en mantenimiento
+        // Registrar camiones en mantenimiento
         List<String> camionesEnMantenimiento = camiones.stream()
                 .filter(c -> c.getEstado() == EstadoCamion.EN_MANTENIMIENTO)
                 .map(Camion::getCodigo)
@@ -326,66 +380,46 @@ public class SimulacionSemanalService {
             log.info("Camiones en mantenimiento: {}", String.join(", ", camionesEnMantenimiento));
         }
 
-        // Mostrar camiones con averías programadas
-        if (averiaService != null) {
-            List<String> camionesConAverias = new ArrayList<>();
-
-            // Para cada camión disponible, verificar si tiene avería programada hoy
-            for (Camion camion : camionesDisponibles) {
-                // Comprobar los tres turnos
-                for (Turno turno : Turno.values()) {
-                    LocalDateTime momentoTurno = fechaDia.withHour(turno.getHoraInicio() + 1);
-                    if (averiaService.tieneProgramadaAveria(camion.getCodigo(), momentoTurno)) {
-                        TipoIncidente tipo = averiaService.obtenerIncidenteProgramado(camion.getCodigo(), turno);
-                        camionesConAverias.add(camion.getCodigo() + " (" + turno + ", " + tipo + ")");
-                    }
-                }
-            }
-
-            if (!camionesConAverias.isEmpty()) {
-                log.info("Camiones con averías programadas hoy: {}", String.join(", ", camionesConAverias));
-            }
-        }
-
-        // Configurar algoritmo genético
+        // Configurar y ejecutar algoritmo genético
         AlgoritmoGenetico algoritmo = new AlgoritmoGenetico(200, 100, 0.1, 0.85, 15);
         algoritmo.setMonitoreoService(monitoreoService);
 
-        // Ejecutar optimización
         List<Ruta> rutas = algoritmo.optimizarRutas(camionesDisponibles, pedidosDia, mapa, fechaDia);
         log.info("Rutas generadas: {}", rutas.size());
-
-        // Verificar asignación de pedidos
-        int totalPedidosAsignados = 0;
-        for (Ruta ruta : rutas) {
-            totalPedidosAsignados += ruta.getPedidosAsignados().size();
-        }
-        log.info("Pedidos asignados: {}/{}", totalPedidosAsignados, pedidosDia.size());
 
         // Simular entregas con posibles averías
         SimuladorEntregas simulador = new SimuladorEntregas(averiaService, dataRepository);
         rutas = simulador.simularEntregas(rutas, fechaDia, mapa, true);
 
-        // Contar averías ocurridas
-        int averiasOcurridas = 0;
-        for (Ruta ruta : rutas) {
-            for (EventoRuta evento : ruta.getEventos()) {
-                if (evento.getTipo() == EventoRuta.TipoEvento.AVERIA) {
-                    averiasOcurridas++;
-                    log.info("Avería ocurrida en la ruta {}: {}", ruta.getCodigoCamion(), evento.getDescripcion());
-                }
-            }
-        }
+        // Calcular métricas
+        calcularMetricasDia(resultado, rutas, pedidosDia, algoritmo.getMejorFitness(), camionesEnMantenimiento);
 
-        // Contar pedidos entregados y retrasados
+        return resultado;
+    }
+
+    private void calcularMetricasDia(Map<String, Object> resultado, List<Ruta> rutas,
+                                     List<Pedido> pedidosDia, double fitness, List<String> camionesEnMantenimiento) {
+
+        int totalPedidosAsignados = rutas.stream().mapToInt(r -> r.getPedidosAsignados().size()).sum();
         int pedidosEntregados = 0;
         int pedidosRetrasados = 0;
+        int averiasOcurridas = 0;
+        double distanciaTotal = 0;
+        double consumoCombustible = 0;
 
         for (Ruta ruta : rutas) {
+            distanciaTotal += ruta.getDistanciaTotal();
+            consumoCombustible += ruta.getConsumoCombustible();
+
+            // Contar averías
+            averiasOcurridas += (int) ruta.getEventos().stream()
+                    .filter(e -> e.getTipo() == EventoRuta.TipoEvento.AVERIA)
+                    .count();
+
+            // Contar entregas
             for (Pedido pedido : ruta.getPedidosAsignados()) {
                 if (pedido.isEntregado()) {
                     pedidosEntregados++;
-
                     if (pedido.getHoraEntregaReal().isAfter(pedido.getHoraLimiteEntrega())) {
                         pedidosRetrasados++;
                     }
@@ -393,19 +427,7 @@ public class SimulacionSemanalService {
             }
         }
 
-        // Calcular métricas
-        double distanciaTotal = 0;
-        double consumoCombustible = 0;
-
-        for (Ruta ruta : rutas) {
-            distanciaTotal += ruta.getDistanciaTotal();
-            consumoCombustible += ruta.getConsumoCombustible();
-        }
-
-        // Actualizar estado de los camiones
-        actualizarCamionesDespuesDeRutas(camiones, rutas);
-
-        // Compilar resultados
+        // Llenar resultado
         resultado.put("rutas", rutas);
         resultado.put("pedidosAsignados", totalPedidosAsignados);
         resultado.put("pedidosEntregados", pedidosEntregados);
@@ -413,19 +435,13 @@ public class SimulacionSemanalService {
         resultado.put("distanciaTotal", distanciaTotal);
         resultado.put("consumoCombustible", consumoCombustible);
         resultado.put("averiasOcurridas", averiasOcurridas);
+        resultado.put("fitness", fitness);
         resultado.put("camionesEnMantenimiento", camionesEnMantenimiento);
-        resultado.put("fitness", algoritmo.getMejorFitness());
-
-        return resultado;
     }
 
-    /**
-     * Actualiza el estado de todos los camiones según fecha
-     */
     private void actualizarEstadoCamiones(List<Camion> camiones, LocalDateTime fecha) {
         for (Camion camion : camiones) {
             LocalDateTime momentoAntes = fecha.withHour(0).withMinute(0).withSecond(0);
-
             EstadoCamion estadoAntes = camion.getEstado();
             camion.actualizarEstado(momentoAntes);
             EstadoCamion estadoDespues = camion.getEstado();
@@ -437,56 +453,81 @@ public class SimulacionSemanalService {
         }
     }
 
-    /**
-     * Actualiza el estado de los camiones después de ejecutar las rutas
-     */
     private void actualizarCamionesDespuesDeRutas(List<Camion> camiones, List<Ruta> rutas) {
-        // Para cada ruta, verificar si hubo averías
         for (Ruta ruta : rutas) {
-            boolean tuvoAveria = false;
-
-            for (EventoRuta evento : ruta.getEventos()) {
-                if (evento.getTipo() == EventoRuta.TipoEvento.AVERIA) {
-                    tuvoAveria = true;
-                    break;
-                }
-            }
+            boolean tuvoAveria = ruta.getEventos().stream()
+                    .anyMatch(e -> e.getTipo() == EventoRuta.TipoEvento.AVERIA);
 
             if (tuvoAveria) {
-                // Buscar el camión correspondiente
-                for (Camion camion : camiones) {
-                    if (camion.getCodigo().equals(ruta.getCodigoCamion())) {
-                        // Actualizar estado según la avería
-                        camion.actualizarEstado(LocalDateTime.now());
-                        break;
-                    }
-                }
+                camiones.stream()
+                        .filter(c -> c.getCodigo().equals(ruta.getCodigoCamion()))
+                        .findFirst()
+                        .ifPresent(c -> c.actualizarEstado(LocalDateTime.now()));
             }
         }
     }
 
-    /**
-     * Filtra los pedidos para un día específico
-     */
     private List<Pedido> filtrarPedidosDia(List<Pedido> pedidos, LocalDateTime fecha) {
         return pedidos.stream()
                 .filter(p -> mismodia(p.getHoraRecepcion(), fecha))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Verifica si dos fechas corresponden al mismo día
-     */
     private boolean mismodia(LocalDateTime fecha1, LocalDateTime fecha2) {
         return fecha1.toLocalDate().isEqual(fecha2.toLocalDate());
     }
 
-    /**
-     * Clona la lista de camiones para no modificar los originales
-     */
     private List<Camion> clonarCamiones(List<Camion> camiones) {
-        // En una implementación real, crearíamos copias completas de los camiones
-        // Para esta demo, usamos los mismos objetos
         return new ArrayList<>(camiones);
+    }
+
+    // Clases internas para estructurar los resultados
+    private static class ResultadosSimulacion {
+        LocalDateTime fechaInicio;
+        LocalDateTime fechaFin;
+        Map<Integer, ResultadoDia> resultadosPorDia;
+
+        // Estadísticas acumuladas
+        int pedidosTotales = 0;
+        int pedidosAsignados = 0;
+        int pedidosEntregados = 0;
+        int pedidosRetrasados = 0;
+        double distanciaTotal = 0.0;
+        double consumoCombustible = 0.0;
+        int averiasOcurridas = 0;
+        double porcentajeEntrega = 0.0;
+
+        // Métricas de fitness
+        double fitnessSemanalAcumulado = 0.0;
+        double fitnessSemanalPromedio = 0.0;
+        double fitnessSemanalMejor = Double.MAX_VALUE;
+        double fitnessSemanalPeor = 0.0;
+        List<Double> fitnessValoresDiarios;
+
+        // Métricas de tiempo
+        long tiempoTotalSimulacionMs = 0;
+        long tiempoTotalAlgoritmosMs = 0;
+        Map<Integer, Long> tiempoEjecucionPorDia;
+
+        // Métricas de eficiencia
+        double eficienciaTiempo = 0.0;
+        double calidadSolucionSemanal = 0.0;
+    }
+
+    private static class ResultadoDia {
+        int numeroDia;
+        LocalDateTime fecha;
+        int pedidosDia;
+        List<Ruta> rutas;
+        int pedidosAsignados;
+        int pedidosEntregados;
+        int pedidosRetrasados;
+        double distanciaTotal;
+        double consumoCombustible;
+        int averiasOcurridas;
+        double fitness;
+        long tiempoEjecucionMs;
+        List<String> camionesEnMantenimiento;
+        List<String> camionesConAverias;
     }
 }

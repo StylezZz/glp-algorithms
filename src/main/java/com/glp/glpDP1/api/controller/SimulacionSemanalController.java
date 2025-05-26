@@ -33,7 +33,7 @@ public class SimulacionSemanalController {
     private final Map<String, Map<String, Object>> resultadosSimulacion = new ConcurrentHashMap<>();
 
     /**
-     * Ejecuta una simulación semanal
+     * Ejecuta una simulación semanal con rutas estructuradas para visualización
      */
     @PostMapping("/ejecutar")
     public ResponseEntity<Map<String, Object>> ejecutarSimulacionSemanal(@RequestBody SimulacionRequest request) {
@@ -73,16 +73,13 @@ public class SimulacionSemanalController {
             // Generar ID para la simulación
             String id = UUID.randomUUID().toString();
 
+            // Estructurar datos para visualización
+            Map<String, Object> respuestaCompleta = estructurarDatosParaVisualizacion(resultado, id, fechaInicio);
+
             // Guardar resultado en memoria
-            resultadosSimulacion.put(id, resultado);
+            resultadosSimulacion.put(id, respuestaCompleta);
 
-            // Agregar información adicional
-            resultado.put("id", id);
-            resultado.put("fechaInicio", fechaInicio);
-            resultado.put("fechaFin", fechaInicio.plusDays(7));
-            resultado.put("duracionSimulacion", "7 días");
-
-            return ResponseEntity.ok(resultado);
+            return ResponseEntity.ok(respuestaCompleta);
         } catch (IllegalArgumentException e) {
             log.error("Error en los parámetros de simulación: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
@@ -90,6 +87,68 @@ public class SimulacionSemanalController {
             log.error("Error al ejecutar simulación semanal: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al ejecutar simulación", e);
+        }
+    }
+
+    /**
+     * Obtiene las rutas específicas para visualización en el mapa
+     */
+    @GetMapping("/rutas-visualizacion/{idSimulacion}")
+    public ResponseEntity<Map<String, Object>> obtenerRutasVisualizacion(@PathVariable String idSimulacion) {
+        try {
+            Map<String, Object> simulacion = resultadosSimulacion.get(idSimulacion);
+            if (simulacion == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontró la simulación con ID: " + idSimulacion);
+            }
+
+            // Extraer solo los datos de rutas para visualización
+            Map<String, Object> rutasVisualizacion = new HashMap<>();
+            rutasVisualizacion.put("id", idSimulacion);
+            rutasVisualizacion.put("rutasPorDia", simulacion.get("rutasPorDia"));
+            rutasVisualizacion.put("resumenCamiones", simulacion.get("resumenCamiones"));
+            rutasVisualizacion.put("configuracionMapa", simulacion.get("configuracionMapa"));
+            rutasVisualizacion.put("fechaInicio", simulacion.get("fechaInicio"));
+            rutasVisualizacion.put("fechaFin", simulacion.get("fechaFin"));
+
+            return ResponseEntity.ok(rutasVisualizacion);
+        } catch (Exception e) {
+            log.error("Error al obtener rutas para visualización: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener datos de visualización", e);
+        }
+    }
+
+    /**
+     * Obtiene las rutas de un día específico
+     */
+    @GetMapping("/rutas-dia/{idSimulacion}/{dia}")
+    public ResponseEntity<Map<String, Object>> obtenerRutasDia(
+            @PathVariable String idSimulacion,
+            @PathVariable int dia) {
+        try {
+            Map<String, Object> simulacion = resultadosSimulacion.get(idSimulacion);
+            if (simulacion == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontró la simulación con ID: " + idSimulacion);
+            }
+
+            Map<String, Object> rutasPorDia = (Map<String, Object>) simulacion.get("rutasPorDia");
+            if (rutasPorDia == null || !rutasPorDia.containsKey("dia_" + dia)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontraron rutas para el día: " + dia);
+            }
+
+            Map<String, Object> rutasDia = new HashMap<>();
+            rutasDia.put("dia", dia);
+            rutasDia.put("rutas", rutasPorDia.get("dia_" + dia));
+            rutasDia.put("configuracionMapa", simulacion.get("configuracionMapa"));
+
+            return ResponseEntity.ok(rutasDia);
+        } catch (Exception e) {
+            log.error("Error al obtener rutas del día: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener rutas del día", e);
         }
     }
 
@@ -315,5 +374,205 @@ public class SimulacionSemanalController {
         }
 
         return ResponseEntity.ok(metricasClave);
+    }
+
+    /**
+     * Estructura los datos de la simulación para facilitar la visualización
+     */
+    private Map<String, Object> estructurarDatosParaVisualizacion(Map<String, Object> resultado, String id, LocalDateTime fechaInicio) {
+        Map<String, Object> respuesta = new HashMap<>(resultado);
+
+        // Agregar información básica
+        respuesta.put("id", id);
+        respuesta.put("fechaInicio", fechaInicio);
+        respuesta.put("fechaFin", fechaInicio.plusDays(7));
+        respuesta.put("duracionSimulacion", "7 días");
+
+        // Estructurar rutas por día para visualización
+        Map<String, Object> rutasPorDia = new HashMap<>();
+        Map<String, Object> resumenCamiones = new HashMap<>();
+
+        Map<Integer, Map<String, Object>> resultadosPorDia = (Map<Integer, Map<String, Object>>) resultado.get("resultadosPorDia");
+
+        if (resultadosPorDia != null) {
+            for (Map.Entry<Integer, Map<String, Object>> entry : resultadosPorDia.entrySet()) {
+                int dia = entry.getKey();
+                Map<String, Object> datosDia = entry.getValue();
+
+                // Procesar rutas del día
+                List<Map<String, Object>> rutasEstructuradas = estructurarRutasDia(datosDia);
+                rutasPorDia.put("dia_" + dia, rutasEstructuradas);
+            }
+        }
+
+        // Obtener configuración del mapa
+        Mapa mapa = dataRepository.obtenerMapa();
+        Map<String, Object> configuracionMapa = estructurarConfiguracionMapa(mapa);
+
+        // Obtener resumen de camiones
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        resumenCamiones = estructurarResumenCamiones(camiones);
+
+        respuesta.put("rutasPorDia", rutasPorDia);
+        respuesta.put("resumenCamiones", resumenCamiones);
+        respuesta.put("configuracionMapa", configuracionMapa);
+
+        return respuesta;
+    }
+
+    /**
+     * Estructura las rutas de un día específico para visualización
+     */
+    private List<Map<String, Object>> estructurarRutasDia(Map<String, Object> datosDia) {
+        List<Map<String, Object>> rutasEstructuradas = new java.util.ArrayList<>();
+
+        if (datosDia.containsKey("rutas")) {
+            List<com.glp.glpDP1.domain.Ruta> rutas = (List<com.glp.glpDP1.domain.Ruta>) datosDia.get("rutas");
+
+            for (com.glp.glpDP1.domain.Ruta ruta : rutas) {
+                Map<String, Object> rutaVisual = new HashMap<>();
+
+                rutaVisual.put("id", ruta.getId());
+                rutaVisual.put("codigoCamion", ruta.getCodigoCamion());
+                rutaVisual.put("origen", coordenadaToMap(ruta.getOrigen()));
+                rutaVisual.put("destino", coordenadaToMap(ruta.getDestino()));
+
+                // Convertir secuencia de nodos
+                List<Map<String, Object>> secuenciaNodos = new java.util.ArrayList<>();
+                for (com.glp.glpDP1.domain.Ubicacion ubicacion : ruta.getSecuenciaNodos()) {
+                    secuenciaNodos.add(coordenadaToMap(ubicacion));
+                }
+                rutaVisual.put("secuenciaNodos", secuenciaNodos);
+
+                // Convertir pedidos asignados
+                List<Map<String, Object>> pedidosVisuales = new java.util.ArrayList<>();
+                for (com.glp.glpDP1.domain.Pedido pedido : ruta.getPedidosAsignados()) {
+                    Map<String, Object> pedidoVisual = new HashMap<>();
+                    pedidoVisual.put("id", pedido.getId());
+                    pedidoVisual.put("idCliente", pedido.getIdCliente());
+                    pedidoVisual.put("ubicacion", coordenadaToMap(pedido.getUbicacion()));
+                    pedidoVisual.put("cantidadGLP", pedido.getCantidadGLP());
+                    pedidoVisual.put("entregado", pedido.isEntregado());
+                    pedidoVisual.put("horaLimiteEntrega", pedido.getHoraLimiteEntrega());
+                    if (pedido.getHoraEntregaReal() != null) {
+                        pedidoVisual.put("horaEntregaReal", pedido.getHoraEntregaReal());
+                    }
+                    pedidosVisuales.add(pedidoVisual);
+                }
+                rutaVisual.put("pedidosAsignados", pedidosVisuales);
+
+                // Métricas de la ruta
+                rutaVisual.put("distanciaTotal", ruta.getDistanciaTotal());
+                rutaVisual.put("consumoCombustible", ruta.getConsumoCombustible());
+                rutaVisual.put("completada", ruta.isCompletada());
+                rutaVisual.put("cancelada", ruta.isCancelada());
+
+                // Eventos de la ruta
+                List<Map<String, Object>> eventosVisuales = new java.util.ArrayList<>();
+                for (com.glp.glpDP1.domain.EventoRuta evento : ruta.getEventos()) {
+                    Map<String, Object> eventoVisual = new HashMap<>();
+                    eventoVisual.put("tipo", evento.getTipo().toString());
+                    eventoVisual.put("momento", evento.getMomento());
+                    eventoVisual.put("ubicacion", coordenadaToMap(evento.getUbicacion()));
+                    eventoVisual.put("descripcion", evento.getDescripcion());
+                    eventosVisuales.add(eventoVisual);
+                }
+                rutaVisual.put("eventos", eventosVisuales);
+
+                rutasEstructuradas.add(rutaVisual);
+            }
+        }
+
+        return rutasEstructuradas;
+    }
+
+    /**
+     * Convierte una ubicación a un mapa para JSON
+     */
+    private Map<String, Object> coordenadaToMap(com.glp.glpDP1.domain.Ubicacion ubicacion) {
+        if (ubicacion == null) return null;
+
+        Map<String, Object> coord = new HashMap<>();
+        coord.put("x", ubicacion.getX());
+        coord.put("y", ubicacion.getY());
+        return coord;
+    }
+
+    /**
+     * Estructura la configuración del mapa para visualización
+     */
+    private Map<String, Object> estructurarConfiguracionMapa(Mapa mapa) {
+        Map<String, Object> config = new HashMap<>();
+
+        config.put("ancho", mapa.getAncho());
+        config.put("alto", mapa.getAlto());
+
+        // Almacenes
+        List<Map<String, Object>> almacenes = new java.util.ArrayList<>();
+        for (com.glp.glpDP1.domain.Almacen almacen : mapa.getAlmacenes()) {
+            Map<String, Object> almacenVisual = new HashMap<>();
+            almacenVisual.put("id", almacen.getId());
+            almacenVisual.put("tipo", almacen.getTipo().toString());
+            almacenVisual.put("ubicacion", coordenadaToMap(almacen.getUbicacion()));
+            almacenVisual.put("capacidadMaxima", almacen.getCapacidadMaxima());
+            almacenes.add(almacenVisual);
+        }
+        config.put("almacenes", almacenes);
+
+        // Bloqueos
+        List<Map<String, Object>> bloqueos = new java.util.ArrayList<>();
+        for (com.glp.glpDP1.domain.Bloqueo bloqueo : mapa.getBloqueos()) {
+            Map<String, Object> bloqueoVisual = new HashMap<>();
+            bloqueoVisual.put("id", bloqueo.getId());
+            bloqueoVisual.put("horaInicio", bloqueo.getHoraInicio());
+            bloqueoVisual.put("horaFin", bloqueo.getHoraFin());
+
+            List<Map<String, Object>> nodos = new java.util.ArrayList<>();
+            for (com.glp.glpDP1.domain.Ubicacion nodo : bloqueo.getNodosBloqueados()) {
+                nodos.add(coordenadaToMap(nodo));
+            }
+            bloqueoVisual.put("nodosBloqueados", nodos);
+            bloqueos.add(bloqueoVisual);
+        }
+        config.put("bloqueos", bloqueos);
+
+        return config;
+    }
+
+    /**
+     * Estructura el resumen de camiones para visualización
+     */
+    private Map<String, Object> estructurarResumenCamiones(List<Camion> camiones) {
+        Map<String, Object> resumen = new HashMap<>();
+
+        List<Map<String, Object>> camionesList = new java.util.ArrayList<>();
+        Map<String, Integer> conteoTipos = new HashMap<>();
+        Map<String, Integer> conteoEstados = new HashMap<>();
+
+        for (Camion camion : camiones) {
+            Map<String, Object> camionVisual = new HashMap<>();
+            camionVisual.put("codigo", camion.getCodigo());
+            camionVisual.put("tipo", camion.getTipo().toString());
+            camionVisual.put("estado", camion.getEstado().toString());
+            camionVisual.put("ubicacionActual", coordenadaToMap(camion.getUbicacionActual()));
+            camionVisual.put("capacidadTanqueGLP", camion.getCapacidadTanqueGLP());
+            camionVisual.put("nivelGLPActual", camion.getNivelGLPActual());
+            camionVisual.put("nivelCombustibleActual", camion.getNivelCombustibleActual());
+
+            camionesList.add(camionVisual);
+
+            // Conteos
+            String tipo = camion.getTipo().toString();
+            String estado = camion.getEstado().toString();
+            conteoTipos.put(tipo, conteoTipos.getOrDefault(tipo, 0) + 1);
+            conteoEstados.put(estado, conteoEstados.getOrDefault(estado, 0) + 1);
+        }
+
+        resumen.put("camiones", camionesList);
+        resumen.put("totalCamiones", camiones.size());
+        resumen.put("conteoTipos", conteoTipos);
+        resumen.put("conteoEstados", conteoEstados);
+
+        return resumen;
     }
 }
