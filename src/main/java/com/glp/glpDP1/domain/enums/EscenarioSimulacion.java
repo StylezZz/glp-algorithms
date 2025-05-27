@@ -6,5 +6,6 @@ package com.glp.glpDP1.domain.enums;
 public enum EscenarioSimulacion {
     DIA_A_DIA,          // Operaciones normales día a día
     SIMULACION_SEMANAL, // Simulación de una semana completa
-    COLAPSO             // Simulación hasta el colapso de las operaciones
+    COLAPSO ,            // Simulación hasta el colapso de las operaciones
+    SEMANAL
 }

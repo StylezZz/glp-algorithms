@@ -387,4 +387,19 @@ public class AlgoritmoController {
                     "Error en simulación con averías", e);
         }
     }
+    @PostMapping("/start-semanal")
+    public ResponseEntity<String> iniciarAlgoritmoSemanal(@RequestBody AlgoritmoSimpleRequest request) {
+        try {
+            log.info("Iniciando algoritmo semanal tipo {}", request.getTipoAlgoritmo());
+            String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoSemanal(request);
+            return ResponseEntity.ok(id);
+        } catch (IllegalStateException e) {
+            log.warn("No hay pedidos para la semana actual: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NO_CONTENT, e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error al iniciar algoritmo semanal: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
+        }
+    }
 }
+

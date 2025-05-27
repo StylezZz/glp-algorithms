@@ -460,6 +460,60 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         );
     }
 
+
+    /**
+     * Inicia una ejecución del algoritmo considerando pedidos de la semana actual
+     */
+    public String iniciarAlgoritmoSemanal(AlgoritmoSimpleRequest request) {
+        // Obtener datos del repositorio
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        Mapa mapa = dataRepository.obtenerMapa();
+    
+        // Obtener todos los pedidos
+        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+    
+        // Filtrar pedidos de la semana actual
+        LocalDateTime hoy = LocalDateTime.now();
+        LocalDateTime inicioDeSemana = hoy.minusDays(hoy.getDayOfWeek().getValue() - 1)
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime finDeSemana = inicioDeSemana.plusDays(7);
+    
+        List<Pedido> pedidosSemana = todosPedidos.stream()
+                .filter(pedido -> {
+                    LocalDateTime fechaPedido = pedido.getHoraRecepcion();
+                    return !fechaPedido.isBefore(inicioDeSemana) && fechaPedido.isBefore(finDeSemana);
+                })
+                .collect(Collectors.toList());
+    
+        log.info("Planificando rutas para {} pedidos de la semana con algoritmo {}", 
+                 pedidosSemana.size(), request.getTipoAlgoritmo());
+    
+        // Si no hay pedidos en la semana, no iniciar algoritmo
+        if (pedidosSemana.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para la semana actual");
+        }
+    
+        // Usar la implementación actual pero con los pedidos filtrados
+        return iniciarEjecucionAlgoritmo(
+                request.getTipoAlgoritmo(),
+                camiones,
+                pedidosSemana,
+                mapa,
+                hoy,
+                EscenarioSimulacion.SEMANAL, // Usar escenario semanal
+                request.getTamañoPoblacion(),
+                request.getNumGeneraciones(),
+                request.getTasaMutacion(),
+                request.getTasaCruce(),
+                request.getElitismo(),
+                request.getNumParticulas(),
+                request.getNumIteraciones(),
+                request.getW(),
+                request.getC1(),
+                request.getC2()
+        );
+    }
+
     private boolean esMismoDia(LocalDateTime fecha1,LocalDateTime fecha2){
         return fecha1.getYear() == fecha2.getYear() &&
                 fecha1.getDayOfYear() == fecha2.getDayOfYear();

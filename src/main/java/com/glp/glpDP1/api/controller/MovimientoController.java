@@ -200,6 +200,49 @@ public class MovimientoController {
         }
     }
 
+
+    /**
+     * Obtiene solo los puntos de la ruta de un camión específico
+     */
+    @GetMapping("/ruta/{idSimulacion}/{codigoCamion}")
+    public ResponseEntity<List<Map<String, Integer>>> obtenerPuntosRutaCamion(
+            @PathVariable String idSimulacion,
+            @PathVariable String codigoCamion) {
+
+        try {
+            List<MovimientoCamion> movimientos = movimientosCache.get(idSimulacion);
+            if (movimientos == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontraron movimientos para la simulación: " + idSimulacion);
+            }
+
+            MovimientoCamion movimientoCamion = movimientos.stream()
+                    .filter(m -> m.getCodigoCamion().equals(codigoCamion))
+                    .findFirst()
+                    .orElse(null);
+
+            if (movimientoCamion == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontró movimiento para el camión: " + codigoCamion);
+            }
+
+            // Extraer solo las coordenadas de los puntos
+            List<Map<String, Integer>> puntosRuta = movimientoCamion.getPasos().stream()
+                    .map(paso -> Map.of(
+                            "x", paso.getUbicacion().getX(),
+                            "y", paso.getUbicacion().getY()))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(puntosRuta);
+
+        } catch (Exception e) {
+            log.error("Error al obtener puntos de ruta del camión: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener puntos de ruta del camión", e);
+        }
+    }
+
+
     /**
      * Obtiene los timestamps para animación de una simulación
      */
