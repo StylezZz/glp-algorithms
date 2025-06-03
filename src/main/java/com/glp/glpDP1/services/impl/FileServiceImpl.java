@@ -13,7 +13,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -34,6 +36,34 @@ public class FileServiceImpl implements FileService {
         List<Pedido> todosPedidos = cargarPedidos(inputStream);
 
         return todosPedidos.stream().filter(pedido -> esMismoDia(pedido.getHoraRecepcion(),fechaReferencia)).collect(Collectors.toList());
+    }
+
+    public List<Pedido> cargarPedidosSemExp(InputStream inputStream,LocalDateTime fechaInicio, LocalDateTime fechaFin){
+        List<Pedido> todoPedidos = cargarPedidos(inputStream);
+
+        return todoPedidos.stream().filter(pedido -> esDentroDelPeriodo(pedido.getHoraRecepcion(), fechaInicio, fechaFin)).collect(Collectors.toList());
+    }
+
+    // Nuevo método - Cargar pedidos por semana
+    public List<Pedido> cargarPedidosPorSemana(InputStream inputStream, LocalDateTime fechaReferencia) {
+        List<Pedido> todosPedidos = cargarPedidos(inputStream);
+        
+        // Calcular el inicio y fin de la semana (lunes a domingo)
+        LocalDateTime inicioDeSemana = fechaReferencia.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime finDeSemana = inicioDeSemana.plusDays(7).minusNanos(1);
+        
+        log.info("Filtrando pedidos de la semana: {} a {}", inicioDeSemana, finDeSemana);
+        
+        return todosPedidos.stream()
+                .filter(pedido -> esDentroDelPeriodo(pedido.getHoraRecepcion(), inicioDeSemana, finDeSemana))
+                .collect(Collectors.toList());
+    }
+
+    // Método auxiliar - Verificar si una fecha está dentro de un período
+    private boolean esDentroDelPeriodo(LocalDateTime fecha, LocalDateTime inicio, LocalDateTime fin) {
+        return (fecha.isEqual(inicio) || fecha.isAfter(inicio)) && 
+               (fecha.isEqual(fin) || fecha.isBefore(fin));
     }
 
     private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
