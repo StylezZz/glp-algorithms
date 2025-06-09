@@ -14,9 +14,8 @@ public class ExportService {
         try (FileWriter writer = new FileWriter(rutaArchivo)) {
             // Escribir cabecera de resumen
             writer.write("ID Ejecución,Tipo Algoritmo,Fitness,Distancia Total,Consumo Combustible,Pedidos Entregados,Pedidos Totales,Tiempo Ejecución\n");
-            writer.write(String.format("%s,%s,%.2f,%.2f,%.2f,%d,%d,%d ms\n\n",
+            writer.write(String.format("%s,%.2f,%.2f,%.2f,%d,%d,%d ms\n\n",
                     resultado.getId(),
-                    resultado.getTipoAlgoritmo(),
                     resultado.getFitness(),
                     resultado.getDistanciaTotal(),
                     resultado.getConsumoCombustible(),

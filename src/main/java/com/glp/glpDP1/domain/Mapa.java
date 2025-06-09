@@ -1,7 +1,6 @@
 package com.glp.glpDP1.domain;
 
 import com.glp.glpDP1.domain.enums.TipoAlmacen;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 

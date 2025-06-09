@@ -363,4 +363,15 @@ public class SimulacionTemporalService {
         // Si hay cambio de dirección (no van en línea recta)
         return !(dx1 == dx2 && dy1 == dy2);
     }
+
+    /**
+     * Configura bloqueos en el mapa para el período de simulación
+     */
+    public void configurarBloqueosMapa(Mapa mapa, LocalDateTime fechaInicio, int duracionDias) {
+        LocalDateTime fechaFin = fechaInicio.plusDays(duracionDias);
+        mapa.filtrarBloqueosParaFecha(fechaInicio.toLocalDate(), fechaFin.toLocalDate());
+
+        log.info("Bloqueos configurados para período {} - {}",
+                fechaInicio.toLocalDate(), fechaFin.toLocalDate());
+    }
 }

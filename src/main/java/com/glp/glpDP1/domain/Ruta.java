@@ -204,6 +204,12 @@ public class Ruta {
                 .toList();
     }
 
+    // AÑADIR este método a la clase Ruta
+    public void setMovimientoDetallado(MovimientoCamion movimientoDetallado) {
+        this.movimientoDetallado = movimientoDetallado;
+        this.movimientoGenerado = true;
+    }
+
     /**
      * Obtiene el estado del camión en un momento específico
      */

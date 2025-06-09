@@ -114,8 +114,8 @@ public class MovimientoController {
     @GetMapping("/posiciones/{idSimulacion}")
     public ResponseEntity<Map<String, Object>> obtenerPosicionesEnMomento(
             @PathVariable String idSimulacion,
-            @RequestParam String momento) {
-
+            @RequestParam String momento
+    ) {
         try {
             List<MovimientoCamion> movimientos = movimientosCache.get(idSimulacion);
             if (movimientos == null) {
@@ -169,7 +169,8 @@ public class MovimientoController {
     @GetMapping("/camion/{idSimulacion}/{codigoCamion}")
     public ResponseEntity<Map<String, Object>> obtenerMovimientoCamion(
             @PathVariable String idSimulacion,
-            @PathVariable String codigoCamion) {
+            @PathVariable String codigoCamion
+    ) {
 
         try {
             List<MovimientoCamion> movimientos = movimientosCache.get(idSimulacion);
@@ -207,8 +208,8 @@ public class MovimientoController {
     @GetMapping("/ruta/{idSimulacion}/{codigoCamion}")
     public ResponseEntity<List<Map<String, Integer>>> obtenerPuntosRutaCamion(
             @PathVariable String idSimulacion,
-            @PathVariable String codigoCamion) {
-
+            @PathVariable String codigoCamion
+    ) {
         try {
             List<MovimientoCamion> movimientos = movimientosCache.get(idSimulacion);
             if (movimientos == null) {
@@ -241,7 +242,6 @@ public class MovimientoController {
                     "Error al obtener puntos de ruta del camión", e);
         }
     }
-
 
     /**
      * Obtiene los timestamps para animación de una simulación
@@ -301,8 +301,8 @@ public class MovimientoController {
     @GetMapping("/progreso/{idSimulacion}")
     public ResponseEntity<Map<String, Object>> obtenerProgresoRutas(
             @PathVariable String idSimulacion,
-            @RequestParam String momento) {
-
+            @RequestParam String momento
+    ) {
         try {
             List<MovimientoCamion> movimientos = movimientosCache.get(idSimulacion);
             if (movimientos == null) {
@@ -365,6 +365,96 @@ public class MovimientoController {
         respuesta.put("cacheEliminado", true);
 
         return ResponseEntity.ok(respuesta);
+    }
+
+    // REEMPLAZAR este método en MovimientoController
+    @PostMapping("/generar-automatico/{algoritmoId}")
+    public ResponseEntity<Map<String, Object>> generarMovimientosAutomatico(@PathVariable String algoritmoId) {
+        try {
+            log.info("Generando movimientos automáticamente para algoritmo: {}", algoritmoId);
+
+            // Obtener resultado del algoritmo
+            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(algoritmoId);
+
+            if (resultado == null || resultado.getRutas().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No se encontraron rutas para la simulación: " + algoritmoId);
+            }
+
+            // Obtener mapa
+            Mapa mapa = dataRepository.obtenerMapa();
+            if (mapa == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se encontró configuración del mapa");
+            }
+
+            // Usar hora de inicio de la simulación
+            LocalDateTime fechaInicio = resultado.getHoraInicio();
+            if (fechaInicio == null) {
+                fechaInicio = LocalDateTime.now().withHour(8).withMinute(0).withSecond(0).withNano(0);
+            }
+
+            // Configurar bloqueos para el período de simulación
+            simulacionTemporalService.configurarBloqueosMapa(mapa, fechaInicio, 7);
+
+            log.info("Generando movimientos detallados para {} rutas desde {}",
+                    resultado.getRutas().size(), fechaInicio);
+
+            // USAR EL SERVICIO TEMPORAL COMPLETO en lugar de generar manualmente
+            List<MovimientoCamion> movimientos = simulacionTemporalService.generarMovimientosDetallados(
+                    resultado.getRutas(), mapa, fechaInicio);
+
+            if (movimientos.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se pudieron generar movimientos detallados");
+            }
+
+            // Optimizar movimientos para visualización
+            List<MovimientoCamion> movimientosOptimizados =
+                    simulacionTemporalService.optimizarMovimientosParaVisualizacion(movimientos);
+
+            // IMPORTANTE: También asignar los movimientos detallados a las rutas
+            // para que SimulationStateService pueda acceder a ellos
+            Map<String, MovimientoCamion> movimientosPorCamion = movimientosOptimizados.stream()
+                    .collect(Collectors.toMap(MovimientoCamion::getCodigoCamion, m -> m));
+
+            for (Ruta ruta : resultado.getRutas()) {
+                MovimientoCamion movimientoDetallado = movimientosPorCamion.get(ruta.getCodigoCamion());
+                if (movimientoDetallado != null) {
+                    ruta.setMovimientoDetallado(movimientoDetallado);
+                    log.debug("Movimiento asignado a ruta {} para camión {}: {} pasos",
+                            ruta.getId(), ruta.getCodigoCamion(), movimientoDetallado.getPasos().size());
+                }
+            }
+
+            // Guardar en cache (igual que antes)
+            movimientosCache.put(algoritmoId, movimientosOptimizados);
+            fechasInicioCache.put(algoritmoId, fechaInicio);
+
+            // Preparar respuesta con estadísticas
+            Map<String, Object> estadisticas = calcularEstadisticasMovimientos(movimientosOptimizados);
+
+            log.info("Movimientos generados exitosamente: {} movimientos para {} rutas",
+                    movimientosOptimizados.size(), resultado.getRutas().size());
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "mensaje", "Movimientos generados automáticamente usando SimulacionTemporalService",
+                    "algoritmoId", algoritmoId,
+                    "totalMovimientos", movimientosOptimizados.size(),
+                    "fechaInicio", fechaInicio,
+                    "fechaFin", calcularFechaFin(movimientosOptimizados),
+                    "duracionTotalHoras", calcularDuracionTotal(movimientosOptimizados),
+                    "estadisticas", estadisticas
+            ));
+
+        } catch (Exception e) {
+            log.error("Error generando movimientos automáticamente: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "mensaje", "Error: " + e.getMessage()
+            ));
+        }
     }
 
     // Métodos auxiliares
@@ -471,4 +561,5 @@ public class MovimientoController {
             default -> "EN_RUTA";
         };
     }
+
 }

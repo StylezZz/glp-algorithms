@@ -14,7 +14,6 @@ import com.glp.glpDP1.services.AlgoritmoService;
 import com.glp.glpDP1.services.impl.AlgoritmoServiceImpl;
 import com.glp.glpDP1.services.impl.AnalisisPedidosService;
 import com.glp.glpDP1.services.impl.AveriaService;
-import com.glp.glpDP1.services.impl.OptimizacionMultipleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,101 +35,23 @@ public class AlgoritmoController {
     private final AlgoritmoService algoritmoService;
 
     @Autowired
-    private OptimizacionMultipleService optimizacionMultipleService;
-    @Autowired
     private DataRepositoryImpl dataRepositoryImpl;
 
     @Autowired
     private AveriaService averiaService;
 
-    @PostMapping("/start-multiple")
-    public ResponseEntity<Map<String, Object>> iniciarMultiple(
-            @RequestBody AlgoritmoSimpleRequest request,
-            @RequestParam(defaultValue = "10") int numEjecuciones) {
-
-        try {
-            // Obtener datos del repositorio
-            List<Camion> camiones = dataRepositoryImpl.obtenerCamiones();
-            List<Pedido> pedidos = dataRepositoryImpl.obtenerPedidos();
-            Mapa mapa = dataRepositoryImpl.obtenerMapa();
-
-            // Si no se especificó momento actual, usar el actual
-            LocalDateTime momentoActual = request.getMomentoActual() != null ? request.getMomentoActual()
-                    : LocalDateTime.now();
-
-            // Convertir escenario
-            EscenarioSimulacion escenario = null;
-            if (request.getEscenario() != null) {
-                try {
-                    escenario = EscenarioSimulacion.valueOf(request.getEscenario());
-                } catch (IllegalArgumentException e) {
-                    escenario = EscenarioSimulacion.DIA_A_DIA;
-                }
-            } else {
-                escenario = EscenarioSimulacion.DIA_A_DIA;
-            }
-
-            // Ejecutar algoritmo múltiples veces
-            OptimizacionMultipleService.ResultadoOptimizacion resultado;
-
-            if ("GENETICO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
-                resultado = optimizacionMultipleService.ejecutarMultipleGenetico(
-                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones);
-            } else {
-                resultado = optimizacionMultipleService.ejecutarMultiplePSO(
-                        camiones, pedidos, mapa, momentoActual, escenario, numEjecuciones);
-            }
-
-            // Iniciar algoritmo con la mejor solución
-            String id = UUID.randomUUID().toString();
-
-            // Crear objeto de estado y resultado
-            AlgoritmoStatusResponse estado = new AlgoritmoStatusResponse(
-                    id,
-                    AlgoritmoStatusResponse.EstadoAlgoritmo.COMPLETADO,
-                    100.0,
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    resultado.fitness);
-
-            // Calcular métricas
-            double distanciaTotal = resultado.rutas.stream()
-                    .mapToDouble(Ruta::getDistanciaTotal).sum();
-
-            double consumoCombustible = resultado.rutas.stream()
-                    .mapToDouble(Ruta::getConsumoCombustible).sum();
-
-            // Crear resultado y almacenar
-            Map<String, Object> respuesta = new HashMap<>();
-            respuesta.put("id", id);
-            respuesta.put("rutas", resultado.rutas);
-            respuesta.put("fitness", resultado.fitness);
-            respuesta.put("numEjecuciones", numEjecuciones);
-            respuesta.put("pedidosAsignados", resultado.pedidosAsignados);
-            respuesta.put("pedidosTotales", pedidos.size());
-            respuesta.put("distanciaTotal", distanciaTotal);
-            respuesta.put("consumoCombustible", consumoCombustible);
-            respuesta.put("tiempoEjecucionMs", resultado.tiempoEjecucionMs);
-
-            return ResponseEntity.ok(respuesta);
-        } catch (Exception e) {
-            log.error("Error al ejecutar optimización múltiple: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al ejecutar optimización", e);
-        }
-    }
 
     /**
      * Inicia una nueva ejecución del algoritmo de optimización
      * usando los datos ya cargados en el sistema
-     * 
+     *
      * @param request Parámetros de ejecución
      * @return ID de la ejecución
      */
     @PostMapping("/start")
     public ResponseEntity<String> iniciarAlgoritmo(@RequestBody AlgoritmoSimpleRequest request) {
         try {
-            log.info("Iniciando algoritmo tipo {}", request.getTipoAlgoritmo());
+            log.info("Iniciando algoritmo");
 
             // Iniciar algoritmo con datos ya cargados
             String id = algoritmoService.iniciarAlgoritmo(request);
@@ -146,7 +67,7 @@ public class AlgoritmoController {
 
     /**
      * Consulta el estado actual de la ejecución de un algoritmo
-     * 
+     *
      * @param id ID de la ejecución
      * @return Estado actual
      */
@@ -166,7 +87,7 @@ public class AlgoritmoController {
 
     /**
      * Obtiene los resultados de una ejecución completada
-     * 
+     *
      * @param id ID de la ejecución
      * @return Resultados de la optimización
      */
@@ -189,7 +110,7 @@ public class AlgoritmoController {
 
     /**
      * Cancela una ejecución en curso
-     * 
+     *
      * @param id ID de la ejecución
      * @return Resultado de la cancelación
      */
@@ -209,19 +130,11 @@ public class AlgoritmoController {
     public ResponseEntity<String> iniciarAlgoritmoOptimizado(@RequestBody AlgoritmoSimpleRequest request) {
         try {
             // Establecer parámetros optimizados
-            if ("GENETICO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
-                request.setTamañoPoblacion(250); // Aumentado de 100
-                request.setNumGeneraciones(150); // Aumentado de 50
-                request.setTasaMutacion(0.15); // Ajustado de 0.05
-                request.setTasaCruce(0.85); // Ajustado de 0.7
-                request.setElitismo(15); // Aumentado de 5
-            } else if ("PSO".equalsIgnoreCase(request.getTipoAlgoritmo())) {
-                request.setNumParticulas(100); // Aumentado de 50
-                request.setNumIteraciones(200); // Aumentado de 100
-                request.setW(0.6); // Ajustado de 0.7
-                request.setC1(1.8); // Ajustado de 1.5
-                request.setC2(1.8); // Ajustado de 1.5
-            }
+            request.setTamañoPoblacion(250); // Aumentado de 100
+            request.setNumGeneraciones(150); // Aumentado de 50
+            request.setTasaMutacion(0.15); // Ajustado de 0.05
+            request.setTasaCruce(0.85); // Ajustado de 0.7
+            request.setElitismo(15); // Aumentado de 5
 
             // Iniciar algoritmo con parámetros optimizados
             String id = algoritmoService.iniciarAlgoritmo(request);
@@ -272,7 +185,7 @@ public class AlgoritmoController {
     @PostMapping("/start-diario")
     public ResponseEntity<String> iniciarAlgoritmoDiario(@RequestBody AlgoritmoSimpleRequest request) {
         try {
-            log.info("Iniciando algoritmo diario tipo {}", request.getTipoAlgoritmo());
+            log.info("Iniciando algoritmo diario tipo");
             String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoDiario(request);
             return ResponseEntity.ok(id);
         } catch (IllegalStateException e) {
@@ -390,7 +303,7 @@ public class AlgoritmoController {
     @PostMapping("/start-semanal")
     public ResponseEntity<String> iniciarAlgoritmoSemanal(@RequestBody AlgoritmoSimpleRequest request) {
         try {
-            log.info("Iniciando algoritmo semanal tipo {}", request.getTipoAlgoritmo());
+            log.info("Iniciando algoritmo semanal");
             String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoSemanal(request);
             return ResponseEntity.ok(id);
         } catch (IllegalStateException e) {
@@ -402,4 +315,3 @@ public class AlgoritmoController {
         }
     }
 }
-

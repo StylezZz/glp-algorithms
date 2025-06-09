@@ -12,6 +12,7 @@ public class EventoRuta {
         RECARGA_COMBUSTIBLE,
         RECARGA_GLP,
         FIN,
+        AVERIA,
         MANTENIMIENTO,
         AVERIA_TI1,         // Nueva: Avería tipo 1 (ej: llanta baja)
         AVERIA_TI2,         // Nueva: Avería tipo 2 (ej: motor ahogado)
