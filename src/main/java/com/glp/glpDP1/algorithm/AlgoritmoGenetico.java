@@ -2,6 +2,7 @@ package com.glp.glpDP1.algorithm;
 
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
+import com.glp.glpDP1.services.impl.MonitoreoService;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,7 +11,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Getter @Setter
+@Getter
+@Setter
 public class AlgoritmoGenetico {
 
     // Parámetros del algoritmo
@@ -30,20 +32,25 @@ public class AlgoritmoGenetico {
     private List<Ruta> mejorSolucion;
     private double mejorFitness;
 
+    private MonitoreoService monitoreoService;
+    private Map<String, List<Ubicacion>> rutasEnProgreso = new HashMap<>();
+    private Map<String, List<Bloqueo>> bloqueosActivos = new HashMap<>();
+
     /**
      * Constructor con parámetros predeterminados
      */
     public AlgoritmoGenetico() {
-        this(100, 50, 0.05, 0.7, 5);
+        this(150, 100, 0.08, 0.8, 10);
     }
 
     /**
      * Constructor con parámetros personalizados
+     *
      * @param tamañoPoblacion Tamaño de la población
      * @param numGeneraciones Número máximo de generaciones
-     * @param tasaMutacion Probabilidad de mutación
-     * @param tasaCruce Probabilidad de cruce
-     * @param elitismo Número de individuos elite que pasan directamente
+     * @param tasaMutacion    Probabilidad de mutación
+     * @param tasaCruce       Probabilidad de cruce
+     * @param elitismo        Número de individuos elite que pasan directamente
      */
     public AlgoritmoGenetico(int tamañoPoblacion, int numGeneraciones,
                              double tasaMutacion, double tasaCruce, int elitismo) {
@@ -56,10 +63,11 @@ public class AlgoritmoGenetico {
 
     /**
      * Ejecuta el algoritmo genético para encontrar la mejor asignación de rutas
+     *
      * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa de la ciudad
-     * @param momento Momento actual para la planificación
+     * @param pedidos  Lista de pedidos pendientes
+     * @param mapa     Mapa de la ciudad
+     * @param momento  Momento actual para la planificación
      * @return Lista de rutas optimizadas
      */
     public List<Ruta> optimizarRutas(List<Camion> camiones, List<Pedido> pedidos,
@@ -68,6 +76,14 @@ public class AlgoritmoGenetico {
         this.pedidosPendientes = preprocesarPedidos(pedidos); // Usar preprocesamiento
         this.mapa = mapa;
         this.momentoActual = momento;
+
+        List<Bloqueo> bloqueos = mapa.getBloqueos().stream()
+                .filter(b -> esBloqueoDuranteEjecucion(b, momento))
+                .collect(Collectors.toList());
+
+        if (monitoreoService != null) {
+            monitoreoService.actualizarBloqueos(bloqueos);
+        }
 
         // Si no hay camiones disponibles o pedidos pendientes, retornar lista vacía
         if (camionesDisponibles.isEmpty() || pedidosPendientes.isEmpty()) {
@@ -146,40 +162,55 @@ public class AlgoritmoGenetico {
             }
         }
 
-        for(Ruta ruta: mejorSolucion){
+        for (Ruta ruta : mejorSolucion) {
             Camion camion = camionesDisponibles.stream()
                     .filter(c -> c.getCodigo().equals(ruta.getCodigoCamion()))
                     .findFirst().orElse(null);
-            if(camion!=null){
-                ruta.optimizarConRecargas(mapa,camion);
+            if (camion != null) {
+                ruta.optimizarConRecargas(mapa, camion);
+            }
+        }
+
+        if (mejorSolucion != null && monitoreoService != null) {
+            for (Ruta ruta : mejorSolucion) {
+                ruta.setMonitoreoService(monitoreoService);
+                ruta.actualizarEstadoMonitoreo(ruta.getOrigen(), momentoActual);
             }
         }
 
         // Retornar la mejor solución encontrada
-        return mejorSolucion;
+        return mejorSolucion != null ? mejorSolucion : new ArrayList<>();
     }
 
-    private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales){
+    // Método para verificar si un bloqueo estará activo durante la ejecución
+    private boolean esBloqueoDuranteEjecucion(Bloqueo bloqueo, LocalDateTime momento) {
+        // Considerar un período de 24 horas desde el momento actual
+        LocalDateTime finPeriodo = momento.plusHours(24);
+
+        return (bloqueo.getHoraFin().isAfter(momento) &&
+                (bloqueo.getHoraInicio().isBefore(finPeriodo) ||
+                        bloqueo.getHoraInicio().isEqual(finPeriodo)));
+    }
+
+    private List<Pedido> preprocesarPedidos(List<Pedido> pedidosOriginales) {
+        pedidosOriginales.sort(Comparator.<Pedido>comparingInt(p -> (int) p.getTiempoLimiteEntrega().toHours()).thenComparingDouble(Pedido::getCantidadGLP));
         List<Pedido> pedidosProcesados = new ArrayList<>();
-        for(Pedido pedido: pedidosOriginales){
-            if(pedido.getCantidadGLP()<=25.0){
+        double maxCapacidadCamion = camionesDisponibles.stream()
+                .mapToDouble(Camion::getCapacidadTanqueGLP).max().orElse(25.0);
+        for (Pedido pedido : pedidosOriginales) {
+            if (pedido.getCantidadGLP() <= maxCapacidadCamion) {
                 pedidosProcesados.add(pedido);
                 continue;
             }
-
+            //Dividir pedido considerando las capacidades de los camiones
             double cantidadRestante = pedido.getCantidadGLP();
             int contador = 1;
-            while(cantidadRestante > 0 ){
-                double cantidadParte = Math.min(cantidadRestante,25.0);
+            while (cantidadRestante > 0) {
+                double mejorCapacidad = encontrarMejorCapacidad(cantidadRestante);
+                double cantidadParte = Math.min(cantidadRestante, mejorCapacidad);
                 cantidadRestante -= cantidadParte;
 
-                Pedido pedidoParte = new Pedido(
-                        pedido.getIdCliente()+"_parte"+contador,
-                        pedido.getUbicacion(),
-                        cantidadParte,
-                        pedido.getHoraRecepcion(),
-                        (int)pedido.getTiempoLimiteEntrega().toHours()
-                );
+                Pedido pedidoParte = new Pedido(pedido.getIdCliente() + "_parte" + contador, pedido.getUbicacion(), cantidadParte, pedido.getHoraRecepcion(), (int) pedido.getTiempoLimiteEntrega().toHours());
 
                 pedidosProcesados.add(pedidoParte);
                 contador++;
@@ -188,8 +219,22 @@ public class AlgoritmoGenetico {
         return pedidosProcesados;
     }
 
+    private double encontrarMejorCapacidad(double cantidadNecesaria) {
+        List<Double> capacidadesDisponibles = camionesDisponibles.stream()
+                .map(Camion::getCapacidadTanqueGLP).distinct().sorted().collect(Collectors.toList());
+
+        //Encontrar la capacidad más cercana pero mayor a la cantidad necesaria
+        for (Double capacidad : capacidadesDisponibles) {
+            if (capacidad >= cantidadNecesaria) {
+                return capacidad;
+            }
+        }
+        return capacidadesDisponibles.isEmpty() ? 25.0 : capacidadesDisponibles.get(capacidadesDisponibles.size() - 1);
+    }
+
     /**
      * Filtra los camiones que están disponibles para asignación
+     *
      * @param camiones Lista de todos los camiones
      * @return Lista de camiones disponibles
      */
@@ -201,6 +246,7 @@ public class AlgoritmoGenetico {
 
     /**
      * Inicializa una población de soluciones aleatorias
+     *
      * @return Lista de individuos (soluciones potenciales)
      */
     private List<Individuo> inicializarPoblacion() {
@@ -224,6 +270,7 @@ public class AlgoritmoGenetico {
 
     /**
      * Evalúa el fitness de toda la población y la ordena de mejor a peor
+     *
      * @param poblacion Lista de individuos a evaluar
      */
     private void evaluarPoblacion(List<Individuo> poblacion) {
@@ -235,13 +282,14 @@ public class AlgoritmoGenetico {
         poblacion.sort(Comparator.comparingDouble(Individuo::getFitness));
     }
 
-    private Camion getCamionPorCodigo(String codigo){
-        return  camionesDisponibles.stream().filter(c->c.getCodigo().equals(codigo)).findFirst().orElse(null);
+    private Camion getCamionPorCodigo(String codigo) {
+        return camionesDisponibles.stream().filter(c -> c.getCodigo().equals(codigo)).findFirst().orElse(null);
     }
 
     /**
      * Calcula el valor de fitness (aptitud) de un individuo
      * Menor fitness es mejor (problema de minimización)
+     *
      * @param individuo Individuo a evaluar
      */
     private void calcularFitness(Individuo individuo) {
@@ -253,12 +301,13 @@ public class AlgoritmoGenetico {
         double retrasosTotal = 0.0;     // Suma de retrasos (en minutos)
         double pedidosNoAsignados = 0;  // Número de pedidos sin asignar
         double sobrecargaTotal = 0.0;   // Suma de sobrecargas de GLP en camiones
+        double riesgoAverias = 0.0;     // Riesgo de averías basado en la distancia
 
         // Evaluar cada ruta
         for (Ruta ruta : rutas) {
             // Obtener el camión asignado a esta ruta
             Camion camion = getCamionPorCodigo(ruta.getCodigoCamion());
-            if(camion==null)continue;
+            if (camion == null) continue;
             for (Camion c : camionesDisponibles) {
                 if (c.getCodigo().equals(ruta.getCodigoCamion())) {
                     camion = c;
@@ -295,7 +344,7 @@ public class AlgoritmoGenetico {
                 int distanciaAlPedido = origen.distanciaA(pedido.getUbicacion());
                 double horasViaje = distanciaAlPedido / 50.0; // 50 km/h velocidad promedio
 
-                LocalDateTime entregaEstimada = momentoActual.plusMinutes((long)(horasViaje * 60));
+                LocalDateTime entregaEstimada = momentoActual.plusMinutes((long) (horasViaje * 60));
 
                 // Si entrega estimada es posterior a la hora límite, hay retraso
                 if (entregaEstimada.isAfter(pedido.getHoraLimiteEntrega())) {
@@ -303,6 +352,29 @@ public class AlgoritmoGenetico {
                     retrasosTotal += retraso.toMinutes();
                 }
             }
+
+            // Calcular riesgo de averías basado en distancia y tipo de camión
+            // Esto es una heurística simple: rutas más largas tienen mayor riesgo de averías
+            double factorRiesgo = 0.0;
+
+            // Factores de riesgo según tipo de camión 
+            switch (camion.getTipo()) {
+                case TA:
+                    factorRiesgo = 0.5;
+                    break; // Menor riesgo
+                case TB:
+                    factorRiesgo = 0.6;
+                    break;
+                case TC:
+                    factorRiesgo = 0.7;
+                    break;
+                case TD:
+                    factorRiesgo = 0.8;
+                    break; // Mayor riesgo
+            }
+
+            // El riesgo aumenta con la distancia y es influenciado por el tipo de camión
+            riesgoAverias += ruta.getDistanciaTotal() * factorRiesgo / 100; // Normalizado
         }
 
         // Contar pedidos no asignados
@@ -313,17 +385,19 @@ public class AlgoritmoGenetico {
         }
 
         // Calcular fitness final (ponderado)
-        double fitness = 0.15 * consumoTotal +
-                0.10 * distanciaTotal +
-                0.20 * retrasosTotal +
-                0.50 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
-                0.05 * (sobrecargaTotal * 1000);     // Penalización fuerte por sobrecarga
+        double fitness = 0.10 * consumoTotal +
+                0.05 * distanciaTotal +
+                0.15 * retrasosTotal +
+                0.60 * (pedidosNoAsignados * 1000) +  // Penalización fuerte por pedidos no asignados
+                0.05 * (sobrecargaTotal * 1000) +     // Penalización fuerte por sobrecarga
+                0.05 * riesgoAverias;                 // Penalización por riesgo de averías
 
         individuo.setFitness(fitness);
     }
 
     /**
      * Selecciona individuos para reproducción mediante torneo
+     *
      * @param poblacion Población actual
      * @return Lista de individuos seleccionados
      */
@@ -351,6 +425,7 @@ public class AlgoritmoGenetico {
 
     /**
      * Realiza el cruce entre dos individuos para generar descendencia
+     *
      * @param padre Primer individuo
      * @param madre Segundo individuo
      * @return Lista con dos nuevos individuos (hijos)
@@ -378,6 +453,7 @@ public class AlgoritmoGenetico {
 
     /**
      * Aplica mutación a un individuo
+     *
      * @param individuo Individuo a mutar
      */
     private void mutacion(Individuo individuo) {
@@ -395,7 +471,8 @@ public class AlgoritmoGenetico {
      * corresponde a un pedido y el valor indica el índice del camión asignado
      * (-1 significa que el pedido no está asignado a ningún camión)
      */
-    @Getter @Setter
+    @Getter
+    @Setter
     private class Individuo {
         private List<Integer> genes;
         private double fitness;
@@ -406,9 +483,9 @@ public class AlgoritmoGenetico {
         }
 
 
-
         /**
          * Crea una copia del individuo
+         *
          * @return Clon del individuo
          */
         public Individuo clonar() {
@@ -420,6 +497,7 @@ public class AlgoritmoGenetico {
 
         /**
          * Decodifica el cromosoma para generar las rutas correspondientes
+         *
          * @return Lista de rutas generadas
          */
         public List<Ruta> decodificarSolucion() {
@@ -460,6 +538,12 @@ public class AlgoritmoGenetico {
             // Optimizar el orden de cada ruta
             for (Ruta ruta : rutasPorCamion.values()) {
                 ruta.optimizarSecuencia();
+            }
+
+            if (monitoreoService != null) {
+                for (Ruta ruta : rutasPorCamion.values()) {
+                    rutasEnProgreso.put(ruta.getId(), new ArrayList<>(ruta.getSecuenciaNodos()));
+                }
             }
 
             return new ArrayList<>(rutasPorCamion.values());

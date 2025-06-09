@@ -22,7 +22,6 @@ public class AlgoritmoResultResponse {
     private int pedidosEntregados;
     private int pedidosTotales;
     private Map<String, Object> metricas; // Métricas adicionales
-    private String tipoAlgoritmo; // "GENETICO" o "PSO"
     private LocalDateTime horaInicio;
     private LocalDateTime horaFin;
     private Duration tiempoEjecucion;

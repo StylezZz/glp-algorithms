@@ -82,15 +82,11 @@ public class AcoServiceImpl implements ACOService {
         // Ejecutar el algoritmo de forma asíncrona
         Future<?> tarea = executor.submit(() -> {
             try {
-                // Actualizar estado a EN_EJECUCION
                 estado.put("estado", "EN_EJECUCION");
+                LocalDateTime horaInicioEjecucion = LocalDateTime.now();
 
-                // Medir tiempo de inicio
-                LocalDateTime horaInicio = LocalDateTime.now();
-
-                // Inicializar el algoritmo ACO con los parámetros proporcionados
+                //RUTA/ Inicializar el algoritmo ACO con los parámetros proporcionados
                 AlgoritmoACO algoritmo;
-
                 // Configurar parámetros si se proporcionaron
                 if (numHormigas != null && numIteraciones != null &&
                         alfa != null && beta != null && rho != null && q0 != null) {
@@ -107,7 +103,6 @@ public class AcoServiceImpl implements ACOService {
                     // Usar parámetros por defecto
                     algoritmo = new AlgoritmoACO();
                 }
-
                 // Ejecutar optimización
                 List<Ruta> rutas = algoritmo.optimizarRutas(
                         camiones,
@@ -115,20 +110,10 @@ public class AcoServiceImpl implements ACOService {
                         mapa,
                         momento
                 );
-
                 double fitness = algoritmo.getMejorFitness();
 
-                // Simular progreso (en un caso real, esto vendría del algoritmo)
-                for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
-                    estado.put("progreso", i);
-                    estado.put("horaUltimaActualizacion", LocalDateTime.now());
-                    estado.put("mejorFitness", algoritmo.getMejorFitness());
-                    Thread.sleep(50); // Simular tiempo de ejecución
-                }
-
-                // Medir tiempo de fin
-                LocalDateTime horaFin = LocalDateTime.now();
-                Duration tiempoEjecucion = Duration.between(horaInicio, horaFin);
+                LocalDateTime horaFinEjecucion = LocalDateTime.now();
+                Duration tiempoEjecucion = Duration.between(horaInicioEjecucion, horaFinEjecucion);
 
                 // Calcular métricas adicionales
                 double distanciaTotal = calcularDistanciaTotal(rutas);
@@ -145,8 +130,8 @@ public class AcoServiceImpl implements ACOService {
                 resultado.put("pedidosEntregados", pedidosEntregados);
                 resultado.put("pedidosTotales", pedidos.size());
                 resultado.put("tipoAlgoritmo", "ACO");
-                resultado.put("horaInicio", horaInicio);
-                resultado.put("horaFin", horaFin);
+                resultado.put("horaInicio", horaInicioEjecucion);
+                resultado.put("horaFin", horaFinEjecucion);
                 resultado.put("tiempoEjecucion", tiempoEjecucion);
 
                 // Métricas adicionales
@@ -163,7 +148,7 @@ public class AcoServiceImpl implements ACOService {
                 // Actualizar estado a COMPLETADO
                 estado.put("estado", "COMPLETADO");
                 estado.put("progreso", 100);
-                estado.put("horaUltimaActualizacion", horaFin);
+                estado.put("horaUltimaActualizacion", horaFinEjecucion);
                 estado.put("mejorFitness", fitness);
 
                 log.info("Algoritmo ACO completado para ID {}, fitness: {}", id, fitness);
@@ -180,40 +165,6 @@ public class AcoServiceImpl implements ACOService {
         tareas.put(id, tarea);
 
         return id;
-    }
-
-    /**
-     * Ejecuta el algoritmo ACO con parámetros optimizados
-     *
-     * @param camiones  Lista de camiones disponibles
-     * @param pedidos   Lista de pedidos pendientes
-     * @param mapa      Mapa con información de la ciudad
-     * @param momento   Momento actual para planificación
-     * @param escenario Escenario de simulación
-     * @return ID de la ejecución
-     */
-    @Override
-    public String ejecutarACOOptimizado(
-            List<Camion> camiones,
-            List<Pedido> pedidos,
-            Mapa mapa,
-            LocalDateTime momento,
-            EscenarioSimulacion escenario) {
-
-        // Parámetros optimizados para ACO basados en pruebas previas
-        return ejecutarACO(
-                camiones,
-                pedidos,
-                mapa,
-                momento,
-                escenario,
-                40,    // Más hormigas para mejor exploración
-                150,   // Más iteraciones para mejor convergencia
-                1.0,   // Alfa: importancia de feromonas
-                2.5,   // Beta: mayor importancia a la heurística de distancia/consumo
-                0.1,   // Rho: tasa de evaporación de feromonas
-                0.9    // q0: 90% explotación, 10% exploración
-        );
     }
 
     /**
@@ -280,106 +231,6 @@ public class AcoServiceImpl implements ACOService {
             }
         }
         return cancelled;
-    }
-
-    /**
-     * Ejecuta múltiples instancias del algoritmo ACO y devuelve la mejor solución
-     *
-     * @param camiones       Lista de camiones disponibles
-     * @param pedidos        Lista de pedidos pendientes
-     * @param mapa           Mapa con información de la ciudad
-     * @param momento        Momento actual para planificación
-     * @param escenario      Escenario de simulación
-     * @param numEjecuciones Número de ejecuciones independientes
-     * @return Resultado de la mejor ejecución
-     */
-    @Override
-    public Map<String, Object> ejecutarMultipleACO(
-            List<Camion> camiones,
-            List<Pedido> pedidos,
-            Mapa mapa,
-            LocalDateTime momento,
-            EscenarioSimulacion escenario,
-            int numEjecuciones) {
-
-        // Crear pool de hilos para ejecuciones paralelas
-        ExecutorService executorService = Executors.newFixedThreadPool(
-                Math.min(numEjecuciones, Runtime.getRuntime().availableProcessors())
-        );
-
-        // Lista de tareas
-        List<Callable<Map<String, Object>>> tareas = new ArrayList<>();
-
-        // Crear tareas para cada ejecución
-        for (int i = 0; i < numEjecuciones; i++) {
-            final int ejecucion = i;
-
-            Callable<Map<String, Object>> tarea = () -> {
-                long tiempoInicio = System.currentTimeMillis();
-
-                // Crear una instancia del algoritmo ACO
-                AlgoritmoACO algoritmo = new AlgoritmoACO();
-                List<Ruta> rutas = algoritmo.optimizarRutas(camiones, pedidos, mapa, momento);
-                double fitness = algoritmo.getMejorFitness();
-
-                long tiempoFin = System.currentTimeMillis();
-                long duracion = tiempoFin - tiempoInicio;
-
-                int pedidosAsignados = rutas.stream()
-                        .mapToInt(r -> r.getPedidosAsignados().size())
-                        .sum();
-
-                double distanciaTotal = calcularDistanciaTotal(rutas);
-                double consumoCombustible = calcularConsumoCombustible(rutas);
-
-                Map<String, Object> resultado = new HashMap<>();
-                resultado.put("ejecucion", ejecucion);
-                resultado.put("rutas", rutas);
-                resultado.put("fitness", fitness);
-                resultado.put("pedidosAsignados", pedidosAsignados);
-                resultado.put("distanciaTotal", distanciaTotal);
-                resultado.put("consumoCombustible", consumoCombustible);
-                resultado.put("tiempoEjecucionMs", duracion);
-
-                return resultado;
-            };
-
-            tareas.add(tarea);
-        }
-
-        try {
-            // Ejecutar todas las tareas y obtener resultados
-            List<Future<Map<String, Object>>> resultados = executorService.invokeAll(tareas);
-
-            // Encontrar la mejor solución
-            Map<String, Object> mejorResultado = null;
-
-            for (Future<Map<String, Object>> futuro : resultados) {
-                Map<String, Object> resultado = futuro.get();
-
-                if (mejorResultado == null ||
-                        (int) resultado.get("pedidosAsignados") > (int) mejorResultado.get("pedidosAsignados") ||
-                        ((int) resultado.get("pedidosAsignados") == (int) mejorResultado.get("pedidosAsignados") &&
-                                (double) resultado.get("fitness") < (double) mejorResultado.get("fitness"))) {
-                    mejorResultado = resultado;
-                }
-            }
-
-            // Añadir información adicional al resultado
-            mejorResultado.put("totalEjecuciones", numEjecuciones);
-            mejorResultado.put("momentoActual", momento);
-            mejorResultado.put("escenario", escenario);
-            mejorResultado.put("tipoAlgoritmo", "ACO_MULTIPLE");
-            mejorResultado.put("pedidosTotales", pedidos.size());
-
-            return mejorResultado;
-
-        } catch (Exception e) {
-            log.error("Error al ejecutar ACO múltiple: {}", e.getMessage(), e);
-            throw new RuntimeException("Error en ejecución múltiple de ACO", e);
-        } finally {
-            executorService.shutdown();
-        }
     }
 
     // Métodos auxiliares para cálculo de métricas

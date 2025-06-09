@@ -1,15 +1,11 @@
 package com.glp.glpDP1.services.impl;
 
 import com.glp.glpDP1.algorithm.AlgoritmoGenetico;
-import com.glp.glpDP1.algorithm.AlgoritmoPSO;
 import com.glp.glpDP1.api.dto.request.AlgoritmoRequest;
 import com.glp.glpDP1.api.dto.request.AlgoritmoSimpleRequest;
 import com.glp.glpDP1.api.dto.response.AlgoritmoResultResponse;
 import com.glp.glpDP1.api.dto.response.AlgoritmoStatusResponse;
-import com.glp.glpDP1.domain.Camion;
-import com.glp.glpDP1.domain.Mapa;
-import com.glp.glpDP1.domain.Pedido;
-import com.glp.glpDP1.domain.Ruta;
+import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.DataRepository;
 import com.glp.glpDP1.services.AlgoritmoService;
@@ -21,6 +17,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +25,7 @@ import java.util.concurrent.*;
 public class AlgoritmoServiceImpl implements AlgoritmoService {
 
     private final DataRepository dataRepository;
-
+    private final MonitoreoService monitoreoService;
     // Almacena las ejecuciones en curso
     private final Map<String, Future<?>> tareas = new ConcurrentHashMap<>();
 
@@ -60,7 +57,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         }
 
         return iniciarEjecucionAlgoritmo(
-                request.getTipoAlgoritmo(),
                 request.getCamiones(),
                 request.getPedidos(),
                 request.getMapa(),
@@ -70,12 +66,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 request.getNumGeneraciones(),
                 request.getTasaMutacion(),
                 request.getTasaCruce(),
-                request.getElitismo(),
-                request.getNumParticulas(),
-                request.getNumIteraciones(),
-                request.getW(),
-                request.getC1(),
-                request.getC2()
+                request.getElitismo()
         );
     }
 
@@ -117,7 +108,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         }
 
         return iniciarEjecucionAlgoritmo(
-                request.getTipoAlgoritmo(),
                 camiones,
                 pedidos,
                 mapa,
@@ -127,12 +117,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 request.getNumGeneraciones(),
                 request.getTasaMutacion(),
                 request.getTasaCruce(),
-                request.getElitismo(),
-                request.getNumParticulas(),
-                request.getNumIteraciones(),
-                request.getW(),
-                request.getC1(),
-                request.getC2()
+                request.getElitismo()
         );
     }
 
@@ -140,7 +125,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
      * Método interno para iniciar la ejecución del algoritmo
      */
     private String iniciarEjecucionAlgoritmo(
-            String tipoAlgoritmo,
             List<Camion> camiones,
             List<Pedido> pedidos,
             Mapa mapa,
@@ -150,12 +134,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
             Integer numGeneraciones,
             Double tasaMutacion,
             Double tasaCruce,
-            Integer elitismo,
-            Integer numParticulas,
-            Integer numIteraciones,
-            Double w,
-            Double c1,
-            Double c2
+            Integer elitismo
     ) {
         // Generar un ID único para esta ejecución
         String id = UUID.randomUUID().toString();
@@ -184,90 +163,47 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 List<Ruta> rutas;
                 double fitness;
 
-                if ("GENETICO".equalsIgnoreCase(tipoAlgoritmo)) {
-                    // Algoritmo Genético
-                    AlgoritmoGenetico algoritmo;
+                // Algoritmo Genético
+                AlgoritmoGenetico algoritmo;
 
-                    // Configurar parámetros si se proporcionaron
-                    if (tamañoPoblacion != null &&
-                            numGeneraciones != null &&
-                            tasaMutacion != null &&
-                            tasaCruce != null &&
-                            elitismo != null) {
+                // Configurar parámetros si se proporcionaron
+                if (tamañoPoblacion != null &&
+                        numGeneraciones != null &&
+                        tasaMutacion != null &&
+                        tasaCruce != null &&
+                        elitismo != null) {
 
-                        algoritmo = new AlgoritmoGenetico(
-                                tamañoPoblacion,
-                                numGeneraciones,
-                                tasaMutacion,
-                                tasaCruce,
-                                elitismo
-                        );
-                    } else {
-                        // Usar parámetros por defecto
-                        algoritmo = new AlgoritmoGenetico();
-                    }
-
-                    // Ejecutar optimización
-                    rutas = algoritmo.optimizarRutas(
-                            camiones,
-                            pedidos,
-                            mapa,
-                            momentoActual
+                    algoritmo = new AlgoritmoGenetico(
+                            tamañoPoblacion,
+                            numGeneraciones,
+                            tasaMutacion,
+                            tasaCruce,
+                            elitismo
                     );
-
-                    fitness = algoritmo.getMejorFitness();
-
-                    // Actualizar progreso durante la ejecución
-                    for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
-                        estado.setProgreso(i);
-                        estado.setHoraUltimaActualizacion(LocalDateTime.now());
-                        estado.setMejorFitness(algoritmo.getMejorFitness());
-                        Thread.sleep(50); // Simular tiempo de ejecución
-                    }
-
-                } else if ("PSO".equalsIgnoreCase(tipoAlgoritmo)) {
-                    // Algoritmo PSO
-                    AlgoritmoPSO algoritmo;
-
-                    // Configurar parámetros si se proporcionaron
-                    if (numParticulas != null &&
-                            numIteraciones != null &&
-                            w != null &&
-                            c1 != null &&
-                            c2 != null) {
-
-                        algoritmo = new AlgoritmoPSO(
-                                numParticulas,
-                                numIteraciones,
-                                w,
-                                c1,
-                                c2
-                        );
-                    } else {
-                        // Usar parámetros por defecto
-                        algoritmo = new AlgoritmoPSO();
-                    }
-
-                    // Ejecutar optimización
-                    rutas = algoritmo.optimizarRutas(
-                            camiones,
-                            pedidos,
-                            mapa,
-                            momentoActual
-                    );
-
-                    fitness = algoritmo.getMejorFitness();
-
-                    // Actualizar progreso durante la ejecución
-                    for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
-                        estado.setProgreso(i);
-                        estado.setHoraUltimaActualizacion(LocalDateTime.now());
-                        estado.setMejorFitness(algoritmo.getMejorFitness());
-                        Thread.sleep(50); // Simular tiempo de ejecución
-                    }
-
                 } else {
-                    throw new IllegalArgumentException("Tipo de algoritmo no soportado: " + tipoAlgoritmo);
+                    // Usar parámetros por defecto
+                    algoritmo = new AlgoritmoGenetico();
+                }
+                algoritmo.setMonitoreoService(monitoreoService);
+                // Ejecutar optimización
+                rutas = algoritmo.optimizarRutas(
+                        camiones,
+                        pedidos,
+                        mapa,
+                        momentoActual
+                );
+
+//                SimuladorEntregas simulador = new SimuladorEntregas();
+//                rutas = simulador.simularEntregas(rutas, momentoActual);
+
+                fitness = algoritmo.getMejorFitness();
+
+                // Actualizar progreso durante la ejecución
+                for (int i = 0; i < 100 && !Thread.currentThread().isInterrupted(); i++) {
+                    estado.setProgreso(i);
+                    estado.setHoraUltimaActualizacion(LocalDateTime.now());
+                    estado.setMejorFitness(algoritmo.getMejorFitness());
+                    Thread.sleep(50); // Simular tiempo de ejecución
                 }
 
                 // Medir tiempo de fin
@@ -278,6 +214,34 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 double distanciaTotal = calcularDistanciaTotal(rutas);
                 double consumoCombustible = calcularConsumoCombustible(rutas);
                 int pedidosEntregados = calcularPedidosEntregados(rutas);
+                double maxCapacidadDisponible = camiones.stream().mapToDouble(Camion::getCapacidadTanqueGLP).max().orElse(0.0);
+                List<Map<String, Object>> pedidosNoAsignados = new ArrayList<>();
+                for (Pedido pedido : pedidos) {
+                    boolean asignado = false;
+                    for (Ruta ruta : rutas) {
+                        if (ruta.getPedidosAsignados().contains(pedido)) {
+                            asignado = true;
+                            break;
+                        }
+                    }
+                    if (!asignado) {
+                        Map<String, Object> pedidosNoAsignado = new HashMap<>();
+                        pedidosNoAsignado.put("idPedido", pedido.getId());
+                        pedidosNoAsignado.put("cantidadGLP", pedido.getCantidadGLP());
+                        pedidosNoAsignado.put("horaRecepcion", pedido.getHoraRecepcion());
+
+                        String razon;
+                        if (pedido.getCantidadGLP() > maxCapacidadDisponible) {
+                            razon = "Excede capacidad maxima de camiones disponibles";
+                        } else if (pedido.getHoraLimiteEntrega().isBefore(momentoActual)) {
+                            razon = "Fuera de ventana de tiempo";
+                        } else {
+                            razon = "No se pudo optimizar en las rutas disponibles";
+                        }
+                        pedidosNoAsignado.put("razon", razon);
+                        pedidosNoAsignados.add(pedidosNoAsignado);
+                    }
+                }
 
                 // Crear objeto de resultado
                 Map<String, Object> metricas = new HashMap<>();
@@ -293,7 +257,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                         pedidosEntregados,
                         pedidos.size(),
                         metricas,
-                        tipoAlgoritmo,
                         horaInicio,
                         horaFin,
                         tiempoEjecucion
@@ -308,8 +271,8 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 estado.setHoraUltimaActualizacion(horaFin);
                 estado.setMejorFitness(fitness);
 
-                log.info("Algoritmo {} completado para ID {}, fitness: {}",
-                        tipoAlgoritmo, id, fitness);
+                log.info("Algoritmo completado para ID {}, fitness: {}",
+                        id, fitness);
 
             } catch (Exception e) {
                 // Actualizar estado a FALLIDO
@@ -380,10 +343,148 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
     }
 
     private double calcularConsumoCombustible(List<Ruta> rutas) {
-        return rutas.stream().mapToDouble(Ruta::getConsumoCombustible).sum();
+        double totalConsumo = 0.0;
+        for (Ruta ruta : rutas) {
+            totalConsumo += ruta.getConsumoCombustible();
+            if (ruta.getConsumoCombustible() <= 0 && ruta.getDistanciaTotal() > 0) {
+                for (Camion camion : dataRepository.obtenerCamiones()) {
+                    if (camion.getCodigo().equals(ruta.getCodigoCamion())) {
+                        double consumo = ruta.calcularConsumoCombustible(camion);
+                        ruta.setConsumoCombustible(consumo);
+                        totalConsumo += consumo;
+                        break;
+                    }
+                }
+            }
+        }
+        return totalConsumo;
     }
 
     private int calcularPedidosEntregados(List<Ruta> rutas) {
         return rutas.stream().mapToInt(ruta -> ruta.getPedidosAsignados().size()).sum();
+    }
+
+    public String iniciarAlgoritmoDiario(AlgoritmoSimpleRequest request) {
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        Mapa mapa = dataRepository.obtenerMapa();
+
+        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+
+        LocalDateTime hoy = LocalDateTime.now();
+        List<Pedido> pedidosHoy = todosPedidos.stream()
+                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), hoy))
+                .collect(Collectors.toList());
+
+        log.info("Planificando rutas para {} pedidos del día de hoy", pedidosHoy.size());
+
+        // Si no hay pedidos hoy, no iniciar algoritmo
+        if (pedidosHoy.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para el día de hoy");
+        }
+
+        // Usar la implementación actual pero con los pedidos filtrados
+        return iniciarEjecucionAlgoritmo(
+                camiones,
+                pedidosHoy,
+                mapa,
+                hoy,
+                EscenarioSimulacion.DIA_A_DIA,
+                request.getTamañoPoblacion(),
+                request.getNumGeneraciones(),
+                request.getTasaMutacion(),
+                request.getTasaCruce(),
+                request.getElitismo()
+        );
+    }
+
+
+    /**
+     * Inicia una ejecución del algoritmo considerando pedidos de la semana actual
+     */
+    public String iniciarAlgoritmoSemanal(AlgoritmoSimpleRequest request) {
+        // Obtener datos del repositorio
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        Mapa mapa = dataRepository.obtenerMapa();
+
+        // Obtener todos los pedidos
+        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+
+        // Filtrar pedidos de la semana
+        LocalDateTime inicioDeSemana = request.getMomentoActual() != null ? request.getMomentoActual() : LocalDateTime.now();
+        LocalDateTime finDeSemana = inicioDeSemana.plusDays(7);
+        System.out.println("Inicio de semana: " + inicioDeSemana);
+        System.out.println("Fin de semana: " + finDeSemana);
+
+        List<Pedido> pedidosSemana = todosPedidos.stream()
+                .filter(pedido -> {
+                    LocalDateTime fechaPedido = pedido.getHoraRecepcion();
+                    return !fechaPedido.isBefore(inicioDeSemana) && fechaPedido.isBefore(finDeSemana);
+                })
+                .collect(Collectors.toList());
+
+        log.info("Planificando rutas para {} pedidos de la semana", pedidosSemana.size());
+
+        // Si no hay pedidos en la semana, no iniciar algoritmo
+        if (pedidosSemana.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para la semana actual");
+        }
+
+        // Usar la implementación actual pero con los pedidos filtrados
+        return iniciarEjecucionAlgoritmo(
+                camiones,
+                pedidosSemana,
+                mapa,
+                inicioDeSemana,
+                EscenarioSimulacion.SEMANAL, // Usar escenario semanal
+                request.getTamañoPoblacion(),
+                request.getNumGeneraciones(),
+                request.getTasaMutacion(),
+                request.getTasaCruce(),
+                request.getElitismo()
+        );
+    }
+
+    private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
+        return fecha1.getYear() == fecha2.getYear() &&
+                fecha1.getDayOfYear() == fecha2.getDayOfYear();
+    }
+
+    /**
+     * Inicia una ejecución del algoritmo genético considerando solo pedidos del día actual
+     */
+    public String iniciarAlgoritmoGeneticoDiario(AlgoritmoSimpleRequest request) {
+        // Obtener datos del repositorio
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        Mapa mapa = dataRepository.obtenerMapa();
+
+        // Obtener todos los pedidos
+        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+
+        // Filtrar solo pedidos de hoy
+        LocalDateTime hoy = LocalDateTime.now();
+        List<Pedido> pedidosHoy = todosPedidos.stream()
+                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), hoy))
+                .collect(Collectors.toList());
+
+        log.info("Planificando rutas para {} pedidos del día de hoy con algoritmo genético", pedidosHoy.size());
+
+        // Si no hay pedidos hoy, no iniciar algoritmo
+        if (pedidosHoy.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para el día de hoy");
+        }
+
+        // Usar la implementación actual pero con los pedidos filtrados
+        return iniciarEjecucionAlgoritmo(
+                camiones,
+                pedidosHoy,
+                mapa,
+                hoy,
+                EscenarioSimulacion.DIA_A_DIA,
+                request.getTamañoPoblacion(),
+                request.getNumGeneraciones(),
+                request.getTasaMutacion(),
+                request.getTasaCruce(),
+                request.getElitismo()
+        );
     }
 }

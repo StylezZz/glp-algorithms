@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 public class Almacen {
     private final String id;
-    private final Ubicacion ubicacion;
+    private Ubicacion ubicacion;
     private final TipoAlmacen tipo;
     private final double capacidadMaxima; // en m3
     private double nivelActual; // en m3

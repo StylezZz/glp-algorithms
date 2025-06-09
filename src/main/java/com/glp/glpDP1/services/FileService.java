@@ -12,12 +12,12 @@ public interface FileService {
      * @param inputStream Stream con el contenido del archivo
      * @return Lista de pedidos procesados
      */
-    List<Pedido> cargarPedidos(InputStream inputStream);
+    List<Pedido> cargarPedidos(InputStream inputStream, String nombreArchivo);
 
     /**
      * Carga y procesa un archivo de bloqueos
      * @param inputStream Stream con el contenido del archivo
      * @return Lista de bloqueos procesados
      */
-    List<Bloqueo> cargarBloqueos(InputStream inputStream);
+    List<Bloqueo> cargarBloqueos(InputStream inputStream, String nombreArchivo);
 }

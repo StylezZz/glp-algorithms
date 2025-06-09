@@ -14,12 +14,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AlgoritmoSimpleRequest {
-
-    /**
-     * Tipo de algoritmo a ejecutar ("GENETICO" o "PSO")
-     */
-    private String tipoAlgoritmo;
-
     /**
      * Momento actual para la planificación
      */
@@ -39,13 +33,4 @@ public class AlgoritmoSimpleRequest {
     private Double tasaMutacion;
     private Double tasaCruce;
     private Integer elitismo;
-
-    /**
-     * Parámetros para algoritmo PSO
-     */
-    private Integer numParticulas;
-    private Integer numIteraciones;
-    private Double w;  // Inercia
-    private Double c1; // Factor de aprendizaje cognitivo
-    private Double c2; // Factor de aprendizaje social
 }

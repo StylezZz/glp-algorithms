@@ -43,22 +43,6 @@ public interface ACOService {
             Double q0);
 
     /**
-     * Ejecuta el algoritmo ACO con parámetros optimizados
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa con información de la ciudad
-     * @param momento Momento actual para planificación
-     * @param escenario Escenario de simulación
-     * @return ID de la ejecución
-     */
-    String ejecutarACOOptimizado(
-            List<Camion> camiones,
-            List<Pedido> pedidos,
-            Mapa mapa,
-            LocalDateTime momento,
-            EscenarioSimulacion escenario);
-
-    /**
      * Obtiene el estado de una ejecución
      * @param id ID de la ejecución
      * @return Estado actual
@@ -79,21 +63,4 @@ public interface ACOService {
      */
     boolean cancelarEjecucion(String id);
 
-    /**
-     * Ejecuta múltiples instancias del algoritmo ACO y devuelve la mejor solución
-     * @param camiones Lista de camiones disponibles
-     * @param pedidos Lista de pedidos pendientes
-     * @param mapa Mapa con información de la ciudad
-     * @param momento Momento actual para planificación
-     * @param escenario Escenario de simulación
-     * @param numEjecuciones Número de ejecuciones independientes
-     * @return Resultado de la mejor ejecución
-     */
-    Map<String, Object> ejecutarMultipleACO(
-            List<Camion> camiones,
-            List<Pedido> pedidos,
-            Mapa mapa,
-            LocalDateTime momento,
-            EscenarioSimulacion escenario,
-            int numEjecuciones);
 }
