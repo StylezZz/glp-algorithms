@@ -80,7 +80,7 @@ public class FileController {
                 throw new IllegalArgumentException("El archivo está vacío");
             }
 
-            List<Bloqueo> bloqueos = fileService.cargarBloqueos(file.getInputStream());
+            List<Bloqueo> bloqueos = fileService.cargarBloqueos(file.getInputStream(), file.getOriginalFilename());
 
             // En una implementación real, aquí se asociarían los bloqueos al mapa
             // usando un servicio adicional si mapaId está definido

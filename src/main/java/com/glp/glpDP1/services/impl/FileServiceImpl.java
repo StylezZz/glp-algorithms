@@ -104,14 +104,19 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<Bloqueo> cargarBloqueos(InputStream inputStream) {
+    public List<Bloqueo> cargarBloqueos(InputStream inputStream, String nombreArchivo) {
         List<Bloqueo> bloqueos = new ArrayList<>();
+        String base = nombreArchivo.replaceFirst("\\.[^.]+$", "");
+        String anioStr = base.replaceAll(".*(\\d{4})\\d{2}$", "$1");
+        String mesStr = base.replaceAll(".*\\d{4}(\\d{2})$", "$1");
+        int anio = Integer.parseInt(anioStr);
+        int mes = Integer.parseInt(mesStr);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    Bloqueo bloqueo = parsearLineaBloqueo(line);
+                    Bloqueo bloqueo = parsearLineaBloqueo(line, anio, mes);
                     bloqueos.add(bloqueo);
                 } catch (Exception e) {
                     log.error("Error al parsear línea de bloqueo: {}", line, e);
@@ -174,7 +179,7 @@ public class FileServiceImpl implements FileService {
      * Formato: ##d##h##m-##d##h##m:x1,y1,x2,y2,...
      * Ejemplo: 01d00h28m-01d20h48m:05,20,05,35
      */
-    private Bloqueo parsearLineaBloqueo(String linea) {
+    private Bloqueo parsearLineaBloqueo(String linea, int anio, int mes) {
         String[] partes = linea.split(":");
         if (partes.length != 2) {
             throw new IllegalArgumentException("Formato de línea inválido: " + linea);
@@ -194,13 +199,8 @@ public class FileServiceImpl implements FileService {
         int horaFin = Integer.parseInt(matcher.group(5));
         int minutoFin = Integer.parseInt(matcher.group(6));
 
-        // Año y mes actuales
-        LocalDateTime ahora = LocalDateTime.now();
-        int year = ahora.getYear();
-        int mes = ahora.getMonthValue();
-
-        LocalDateTime horaInicioVar = LocalDateTime.of(year, mes, diaInicio, horaInicio, minutoInicio);
-        LocalDateTime horaFinVar = LocalDateTime.of(year, mes, diaFin, horaFin, minutoFin);
+        LocalDateTime horaInicioVar = LocalDateTime.of(anio, mes, diaInicio, horaInicio, minutoInicio);
+        LocalDateTime horaFinVar = LocalDateTime.of(anio, mes, diaFin, horaFin, minutoFin);
 
         // Parsear coordenadas
         String[] coordenadasStr = partes[1].split(",");

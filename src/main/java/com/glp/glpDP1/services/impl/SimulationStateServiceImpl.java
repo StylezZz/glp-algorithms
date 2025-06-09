@@ -1,6 +1,5 @@
 package com.glp.glpDP1.services.impl;
 
-import com.glp.glpDP1.algorithm.AlgoritmoGenetico;
 import com.glp.glpDP1.api.dto.websocket.EstadoSimulacionResponse;
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EstadoCamion;
@@ -66,6 +65,12 @@ public class SimulationStateServiceImpl implements SimulationStateService {
             // Obtener datos base
             this.camionesSimulacion = new ArrayList<>(dataRepository.obtenerCamiones());
             this.pedidosOriginales = new ArrayList<>(dataRepository.obtenerPedidos());
+            for (Pedido pedido : pedidosOriginales) {
+                pedido.setEntregado(false); // Reset para simulación
+                pedido.setHoraEntregaReal(null);
+            }
+            log.info("Estado de pedidos reseteado para simulación en tiempo real");
+
             this.mapaSimulacion = dataRepository.obtenerMapa();
 
             // USAR FECHA PERSONALIZADA si se proporciona
@@ -86,6 +91,8 @@ public class SimulationStateServiceImpl implements SimulationStateService {
 
             // Limpiar estado
             this.pedidosEntregados.clear();
+
+
 
             this.simulacionActiva = true;
             this.pausada = false;
@@ -108,9 +115,12 @@ public class SimulationStateServiceImpl implements SimulationStateService {
             this.movimientosActuales.clear();
             this.movimientosPorCamion.clear();
 
-            // Configurar bloqueos para el nuevo período
+            // Configurar bloqueos para el nuevo período DE LA SIMULACIÓN
             LocalDateTime fechaFin = nuevaFechaInicio.plusDays(7);
             mapaSimulacion.filtrarBloqueosParaFecha(nuevaFechaInicio.toLocalDate(), fechaFin.toLocalDate());
+
+            log.info("Bloqueos configurados para simulación: {} - {}",
+                    nuevaFechaInicio.toLocalDate(), fechaFin.toLocalDate());
 
             // Regenerar movimientos usando SimulacionTemporalService
             SimulacionTemporalService simulacionTemporalService = new SimulacionTemporalService(averiaService);
@@ -136,6 +146,17 @@ public class SimulationStateServiceImpl implements SimulationStateService {
 
             log.info("Movimientos regenerados con nueva fecha {}: {} movimientos creados",
                     nuevaFechaInicio, movimientosActuales.size());
+
+            log.info("Verificando vínculos pedido-movimiento:");
+            int pedidosConEntrega = 0;
+            for (MovimientoCamion movimiento : nuevosMovimientos) {
+                for (var paso : movimiento.getPasos()) {
+                    if (paso.getTipo() == MovimientoCamion.PasoMovimiento.TipoPaso.ENTREGA && paso.getPedidoId() != null) {
+                        pedidosConEntrega++;
+                    }
+                }
+            }
+            log.info("Total pasos de entrega con pedidoId: {}", pedidosConEntrega);
 
         } catch (Exception e) {
             log.error("Error al regenerar movimientos con nueva fecha: {}", e.getMessage(), e);
@@ -198,6 +219,8 @@ public class SimulationStateServiceImpl implements SimulationStateService {
 
             // Métricas generales
             estado.setMetricas(calcularMetricasGenerales(momentoSolicitud));
+
+            estado.setBloqueosActivos(obtenerBloqueosActivos(momentoSolicitud));
 
             log.debug("Estado calculado: {} camiones activos, {} pedidos pendientes para próximos 15 min",
                     estado.getEstadoCamiones().size(), estado.getPedidosPendientes().size());
@@ -327,71 +350,88 @@ public class SimulationStateServiceImpl implements SimulationStateService {
 
     private List<EstadoSimulacionResponse.EstadoPedidoSimulacion> obtenerPedidosPendientesProximos15Min(LocalDateTime momento) {
         LocalDateTime limiteIntervalo = momento.plusSeconds(SEGUNDOS_INTERVALO);
-
         List<EstadoSimulacionResponse.EstadoPedidoSimulacion> pedidosProximos15Min = new ArrayList<>();
 
-        for (Pedido pedido : pedidosOriginales) {
-            // Solo pedidos pendientes
-            if (pedidosEntregados.contains(pedido.getId()) || pedido.isEntregado()) {
-                continue;
-            }
+        log.debug("Buscando pedidos pendientes desde {} hasta {}", momento, limiteIntervalo);
+        log.debug("Total pedidos originales: {}", pedidosOriginales.size());
+        log.debug("Pedidos ya entregados EN SIMULACIÓN: {}", pedidosEntregados.size());
 
-            // Buscar si este pedido tiene asignación
-            boolean seraProceadoEnIntervalo = false;
-            LocalDateTime horaEntregaEstimada = null;
-            String camionAsignado = null;
+        // Crear mapa de entregas programadas (para pedidos ya asignados)
+        Map<String, LocalDateTime> entregasProgramadas = new HashMap<>();
+        Map<String, String> camionesAsignados = new HashMap<>();
 
-            for (MovimientoCamion movimiento : movimientosActuales) {
-                for (var paso : movimiento.getPasos()) {
-                    if (paso.getTipo() == MovimientoCamion.PasoMovimiento.TipoPaso.ENTREGA &&
-                            pedido.getId().equals(paso.getPedidoId())) {
-
-                        horaEntregaEstimada = paso.getTiempoLlegada();
-                        camionAsignado = movimiento.getCodigoCamion();
-
-                        // Verificar si será entregado en el intervalo
-                        if (paso.getTiempoLlegada().isAfter(momento) &&
-                                (paso.getTiempoLlegada().isBefore(limiteIntervalo) ||
-                                        paso.getTiempoLlegada().isEqual(limiteIntervalo))) {
-                            seraProceadoEnIntervalo = true;
-                        }
-                        break;
-                    }
+        for (MovimientoCamion movimiento : movimientosActuales) {
+            for (var paso : movimiento.getPasos()) {
+                if (paso.getTipo() == MovimientoCamion.PasoMovimiento.TipoPaso.ENTREGA && paso.getPedidoId() != null) {
+                    entregasProgramadas.put(paso.getPedidoId(), paso.getTiempoLlegada());
+                    camionesAsignados.put(paso.getPedidoId(), movimiento.getCodigoCamion());
                 }
-                if (horaEntregaEstimada != null) break;
+            }
+        }
+
+        log.debug("Total entregas programadas encontradas: {}", entregasProgramadas.size());
+
+        for (Pedido pedido : pedidosOriginales) {
+            // FILTRO 1: Solo pedidos NO entregados en la simulación actual
+            if (pedidosEntregados.contains(pedido.getId())) {
+                continue; // Este pedido YA fue entregado en la simulación WebSocket
             }
 
-            // Incluir pedidos que serán procesados en próximos 15 min O que están en ruta
-            if (seraProceadoEnIntervalo || (camionAsignado != null && horaEntregaEstimada != null)) {
-                EstadoSimulacionResponse.EstadoPedidoSimulacion estado = new EstadoSimulacionResponse.EstadoPedidoSimulacion();
-                estado.setId(pedido.getId());
-                estado.setIdCliente(pedido.getIdCliente());
-                estado.setUbicacion(pedido.getUbicacion());
-                estado.setCantidadGLP(pedido.getCantidadGLP());
-                estado.setHoraLimiteEntrega(pedido.getHoraLimiteEntrega());
-                estado.setCamionAsignado(camionAsignado);
-                estado.setHoraEntregaEstimada(horaEntregaEstimada);
+            // FILTRO 2: Solo pedidos que ya están disponibles (su hora de recepción ha pasado)
+            if (pedido.getHoraRecepcion().isAfter(momento)) {
+                continue; // Este pedido aún no ha sido recibido
+            }
 
-                if (seraProceadoEnIntervalo) {
+            // Ahora clasificar el pedido según su estado
+            LocalDateTime horaEntregaEstimada = entregasProgramadas.get(pedido.getId());
+            String camionAsignado = camionesAsignados.get(pedido.getId());
+
+            EstadoSimulacionResponse.EstadoPedidoSimulacion estado = new EstadoSimulacionResponse.EstadoPedidoSimulacion();
+            estado.setId(pedido.getId());
+            estado.setIdCliente(pedido.getIdCliente());
+            estado.setUbicacion(pedido.getUbicacion());
+            estado.setCantidadGLP(pedido.getCantidadGLP());
+            estado.setHoraLimiteEntrega(pedido.getHoraLimiteEntrega());
+            estado.setCamionAsignado(camionAsignado);
+            estado.setHoraEntregaEstimada(horaEntregaEstimada);
+
+            if (horaEntregaEstimada != null) {
+                // CASO 1: Pedido tiene entrega programada
+                boolean seraEntregadoEnIntervalo =
+                        horaEntregaEstimada.isAfter(momento) &&
+                                (horaEntregaEstimada.isBefore(limiteIntervalo) || horaEntregaEstimada.isEqual(limiteIntervalo));
+
+                if (seraEntregadoEnIntervalo) {
                     estado.setEstadoEntrega("SERA_ENTREGADO");
-                } else if (camionAsignado != null) {
+                } else if (horaEntregaEstimada.isAfter(momento)) {
                     estado.setEstadoEntrega("EN_RUTA");
                 } else {
-                    estado.setEstadoEntrega("PENDIENTE");
+                    // La entrega programada ya pasó pero no se ha marcado como entregado
+                    estado.setEstadoEntrega("PENDIENTE_VERIFICACION");
                 }
-
-                estado.setUrgente(pedido.getHoraLimiteEntrega().isBefore(momento.plusHours(2)));
-
-                pedidosProximos15Min.add(estado);
+            } else {
+                // CASO 2: Pedido disponible pero SIN asignación/entrega programada
+                // Esto puede pasar si el algoritmo no pudo asignar el pedido
+                estado.setEstadoEntrega("PENDIENTE_ASIGNACION");
             }
+
+            // Marcar como urgente si está cerca del límite
+            estado.setUrgente(pedido.getHoraLimiteEntrega().isBefore(momento.plusHours(2)));
+
+            // INCLUIR TODOS los pedidos disponibles, no solo los asignados
+            pedidosProximos15Min.add(estado);
         }
 
         log.debug("Pedidos pendientes para próximos 15 min: {}", pedidosProximos15Min.size());
 
+        // Estadísticas adicionales para debugging
+        long asignados = pedidosProximos15Min.stream().filter(p -> p.getCamionAsignado() != null).count();
+        long noAsignados = pedidosProximos15Min.stream().filter(p -> p.getCamionAsignado() == null).count();
+        log.debug("Pedidos asignados: {}, No asignados: {}", asignados, noAsignados);
+
         return pedidosProximos15Min;
     }
 
-    // Resto de métodos auxiliares (sin cambios)...
     @Override
     public void generarAveria(String codigoCamion, TipoIncidente tipoIncidente, LocalDateTime momento) {
         // Implementar replanificación...
@@ -495,6 +535,72 @@ public class SimulationStateServiceImpl implements SimulationStateService {
             }
         }
         return null;
+    }
+
+    /**
+     * Obtiene los bloqueos activos durante el intervalo de 15 minutos
+     */
+    private List<EstadoSimulacionResponse.BloqueoActivo> obtenerBloqueosActivos(LocalDateTime momento) {
+        LocalDateTime limiteIntervalo = momento.plusSeconds(SEGUNDOS_INTERVALO);
+        List<EstadoSimulacionResponse.BloqueoActivo> bloqueosActivos = new ArrayList<>();
+
+        if (mapaSimulacion.getBloqueos() == null || mapaSimulacion.getBloqueos().isEmpty()) {
+            return bloqueosActivos;
+        }
+
+        for (Bloqueo bloqueo : mapaSimulacion.getBloqueos()) {
+            // Verificar si el bloqueo está activo durante el intervalo
+            boolean activoEnIntervalo = esBloqueoActivoEnIntervalo(bloqueo, momento, limiteIntervalo);
+
+            if (activoEnIntervalo) {
+                EstadoSimulacionResponse.BloqueoActivo bloqueoActivo = new EstadoSimulacionResponse.BloqueoActivo();
+                bloqueoActivo.setId(bloqueo.getId());
+                bloqueoActivo.setHoraInicio(bloqueo.getHoraInicio());
+                bloqueoActivo.setHoraFin(bloqueo.getHoraFin());
+                bloqueoActivo.setNodosBloqueados(new ArrayList<>(bloqueo.getNodosBloqueados()));
+                bloqueoActivo.setActivoEnIntervalo(true);
+                bloqueoActivo.setDescripcion(generarDescripcionBloqueo(bloqueo, momento, limiteIntervalo));
+
+                bloqueosActivos.add(bloqueoActivo);
+
+                log.debug("Bloqueo activo en intervalo: {} con {} nodos bloqueados",
+                        bloqueo.getId(), bloqueo.getNodosBloqueados().size());
+            }
+        }
+
+        log.debug("Bloqueos activos en intervalo {}-{}: {}", momento, limiteIntervalo, bloqueosActivos.size());
+
+        return bloqueosActivos;
+    }
+
+    /**
+     * Verifica si un bloqueo está activo durante el intervalo
+     */
+    private boolean esBloqueoActivoEnIntervalo(Bloqueo bloqueo, LocalDateTime inicioIntervalo, LocalDateTime finIntervalo) {
+        LocalDateTime bloqueoInicio = bloqueo.getHoraInicio();
+        LocalDateTime bloqueoFin = bloqueo.getHoraFin();
+
+        // El bloqueo está activo si hay intersección temporal entre el bloqueo y el intervalo
+        return !(bloqueoFin.isBefore(inicioIntervalo) || bloqueoInicio.isAfter(finIntervalo));
+    }
+
+    /**
+     * Genera descripción detallada del bloqueo
+     */
+    private String generarDescripcionBloqueo(Bloqueo bloqueo, LocalDateTime inicioIntervalo, LocalDateTime finIntervalo) {
+        LocalDateTime bloqueoInicio = bloqueo.getHoraInicio();
+        LocalDateTime bloqueoFin = bloqueo.getHoraFin();
+
+        String estado;
+        if (bloqueoInicio.isAfter(inicioIntervalo)) {
+            estado = "Comenzará durante el intervalo";
+        } else if (bloqueoFin.isBefore(finIntervalo)) {
+            estado = "Terminará durante el intervalo";
+        } else {
+            estado = "Activo durante todo el intervalo";
+        }
+
+        return String.format("%s (%d nodos bloqueados)", estado, bloqueo.getNodosBloqueados().size());
     }
 
     @Override

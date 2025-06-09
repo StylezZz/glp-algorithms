@@ -193,8 +193,8 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                         momentoActual
                 );
 
-                SimuladorEntregas simulador = new SimuladorEntregas();
-                rutas = simulador.simularEntregas(rutas, momentoActual);
+//                SimuladorEntregas simulador = new SimuladorEntregas();
+//                rutas = simulador.simularEntregas(rutas, momentoActual);
 
                 fitness = algoritmo.getMejorFitness();
 
@@ -205,7 +205,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                     estado.setMejorFitness(algoritmo.getMejorFitness());
                     Thread.sleep(50); // Simular tiempo de ejecución
                 }
-
 
                 // Medir tiempo de fin
                 LocalDateTime horaFin = LocalDateTime.now();

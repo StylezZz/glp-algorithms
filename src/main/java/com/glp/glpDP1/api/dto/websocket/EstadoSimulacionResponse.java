@@ -12,6 +12,7 @@ public class EstadoSimulacionResponse {
     private List<EstadoCamionInterval> estadoCamiones;
     private List<EstadoPedidoSimulacion> pedidosPendientes;
     private List<EventoReciente> eventosRecientes;
+    private List<BloqueoActivo> bloqueosActivos;
     private MetricasGenerales metricas;
     private boolean simulacionActiva;
 
@@ -60,5 +61,15 @@ public class EstadoSimulacionResponse {
         private double porcentajeCompletado;
         private double distanciaRecorridaTotal;
         private double combustibleConsumido;
+    }
+
+    @Data
+    public static class BloqueoActivo {
+        private String id;
+        private LocalDateTime horaInicio;
+        private LocalDateTime horaFin;
+        private List<Ubicacion> nodosBloqueados;
+        private boolean activoEnIntervalo;
+        private String descripcion;
     }
 }
