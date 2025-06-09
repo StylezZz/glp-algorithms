@@ -1,14 +1,16 @@
 package com.glp.glpDP1.api.controller;
 
+import com.glp.glpDP1.api.dto.request.PedidoRequest;
+import com.glp.glpDP1.api.dto.response.PedidoResponse;
 import com.glp.glpDP1.domain.Pedido;
+import com.glp.glpDP1.mapper.PedidoDtoMapper;
+import com.glp.glpDP1.services.PedidoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -17,57 +19,22 @@ import java.util.List;
 @Slf4j
 public class PedidoController {
 
-    // En una implementación real, aquí se inyectaría un PedidoService
-    // private final PedidoService pedidoService;
+    private final PedidoService pedidoService;
 
-    // Para simplificar, usamos una lista en memoria
-    private final List<Pedido> pedidos = new ArrayList<>();
-
-    /**
-     * Obtiene todos los pedidos pendientes
-     */
     @GetMapping
     public ResponseEntity<List<Pedido>> obtenerPedidos() {
-        return ResponseEntity.ok(pedidos);
+        return ResponseEntity.ok(pedidoService.listarPedidos());
     }
 
-    /**
-     * Crea un nuevo pedido
-     */
     @PostMapping
-    public ResponseEntity<Pedido> crearPedido(@RequestBody Pedido pedido) {
-        try {
-            // En una implementación real, aquí se guardaría en la base de datos
-            pedidos.add(pedido);
-            return ResponseEntity.status(HttpStatus.CREATED).body(pedido);
-        } catch (Exception e) {
-            log.error("Error al crear pedido: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear el pedido", e);
-        }
+    public ResponseEntity<PedidoResponse> crearPedido(@RequestBody PedidoRequest request) {
+        Pedido pedido = PedidoDtoMapper.toDomain(request);
+        pedidoService.guardarPedido(pedido);
+        return ResponseEntity.ok(PedidoDtoMapper.toResponse(pedido));
     }
 
-    /**
-     * Obtiene un pedido por su ID
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Pedido> obtenerPedido(@PathVariable String id) {
-        return pedidos.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
-    }
-
-    /**
-     * Elimina un pedido
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarPedido(@PathVariable String id) {
-        boolean removed = pedidos.removeIf(p -> p.getId().equals(id));
-        if (removed) {
-            return ResponseEntity.noContent().build();
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado");
-        }
+    @GetMapping("/cliente/{idCliente}")
+    public ResponseEntity<List<Pedido>> buscarPorCliente(@PathVariable String idCliente) {
+        return ResponseEntity.ok(pedidoService.buscarPorCliente(idCliente));
     }
 }
