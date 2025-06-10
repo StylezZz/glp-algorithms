@@ -1,207 +1,27 @@
-2025-06-08T20:14:25.238-05:00  INFO 12472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 12472 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T20:14:25.244-05:00  INFO 12472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T20:14:26.888-05:00  INFO 12472 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T20:14:26.904-05:00  INFO 12472 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T20:14:26.904-05:00  INFO 12472 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T20:14:26.968-05:00  INFO 12472 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T20:14:26.969-05:00  INFO 12472 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1669 ms
-2025-06-08T20:14:27.097-05:00  INFO 12472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T20:14:27.102-05:00  INFO 12472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:14:27.109-05:00  INFO 12472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T20:14:27.109-05:00  INFO 12472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T20:14:27.115-05:00  INFO 12472 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:14:28.092-05:00  INFO 12472 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2025-06-08T20:14:28.210-05:00  INFO 12472 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2025-06-08T20:14:28.218-05:00  INFO 12472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 4.332 seconds (process running for 6.675)
-2025-06-08T20:15:05.069-05:00  INFO 12472 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2025-06-08T20:15:05.070-05:00  INFO 12472 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2025-06-08T20:15:05.072-05:00  INFO 12472 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
-2025-06-08T20:15:10.615-05:00 ERROR 12472 --- [Glp_Project] [http-nio-8080-exec-3] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class com.glp.glpDP1.domain.Pedido]] with root cause
-
-com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Cannot construct instance of `com.glp.glpDP1.domain.Pedido` (no Creators, like default constructor, exist): cannot deserialize from Object value (no delegate- or property-based Creator)
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 2, column: 3]
-	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:67) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.reportBadDefinition(DeserializationContext.java:1888) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DatabindContext.reportBadDefinition(DatabindContext.java:414) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.handleMissingInstantiator(DeserializationContext.java:1375) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1512) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:348) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader._bindAndClose(ObjectReader.java:2131) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader.readValue(ObjectReader.java:1501) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:398) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:357) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:204) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:176) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:150) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1740) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2025-06-08T20:16:14.715-05:00 ERROR 12472 --- [Glp_Project] [http-nio-8080-exec-5] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class com.glp.glpDP1.domain.Pedido]] with root cause
-
-com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Cannot construct instance of `com.glp.glpDP1.domain.Pedido` (no Creators, like default constructor, exist): cannot deserialize from Object value (no delegate- or property-based Creator)
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 2, column: 3]
-	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:67) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.reportBadDefinition(DeserializationContext.java:1888) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DatabindContext.reportBadDefinition(DatabindContext.java:414) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.handleMissingInstantiator(DeserializationContext.java:1375) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1512) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:348) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader._bindAndClose(ObjectReader.java:2131) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader.readValue(ObjectReader.java:1501) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:398) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:357) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:204) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:176) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:150) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1740) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2025-06-08T20:25:24.854-05:00  INFO 12472 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2025-06-08T20:25:24.887-05:00  INFO 12472 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2025-06-08T20:29:43.076-05:00  INFO 7372 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 7372 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T20:29:43.078-05:00  INFO 7372 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T20:29:44.590-05:00  INFO 7372 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T20:29:44.609-05:00  INFO 7372 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T20:29:44.609-05:00  INFO 7372 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T20:29:44.685-05:00  INFO 7372 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T20:29:44.685-05:00  INFO 7372 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1554 ms
-2025-06-08T20:29:44.819-05:00  INFO 7372 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T20:29:44.824-05:00  INFO 7372 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:29:44.832-05:00  INFO 7372 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T20:29:44.832-05:00  INFO 7372 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T20:29:44.838-05:00  INFO 7372 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:29:44.850-05:00  WARN 7372 --- [Glp_Project] [main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'pedidoController' defined in file [C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main\com\glp\glpDP1\api\controller\PedidoController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'pedidoService' defined in file [C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main\com\glp\glpDP1\services\PedidoService.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'com.glp.glpDP1.repository.PedidoRepository' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
-2025-06-08T20:29:44.853-05:00  INFO 7372 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
-2025-06-08T20:29:44.872-05:00  INFO 7372 --- [Glp_Project] [main] .s.b.a.l.ConditionEvaluationReportLogger : 
-
-Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
-2025-06-08T20:29:44.900-05:00 ERROR 7372 --- [Glp_Project] [main] o.s.b.d.LoggingFailureAnalysisReporter   : 
-
-***************************
-APPLICATION FAILED TO START
-***************************
-
-Description:
-
-Parameter 0 of constructor in com.glp.glpDP1.services.PedidoService required a bean of type 'com.glp.glpDP1.repository.PedidoRepository' that could not be found.
-
-
-Action:
-
-Consider defining a bean of type 'com.glp.glpDP1.repository.PedidoRepository' in your configuration.
-
-2025-06-08T20:33:59.546-05:00  INFO 6476 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 6476 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T20:33:59.548-05:00  INFO 6476 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T20:34:00.537-05:00  INFO 6476 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2025-06-08T20:34:00.804-05:00  INFO 6476 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 253 ms. Found 1 JPA repository interface.
-2025-06-08T20:34:01.507-05:00  INFO 6476 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T20:34:01.526-05:00  INFO 6476 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T20:34:01.526-05:00  INFO 6476 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T20:34:01.601-05:00  INFO 6476 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T20:34:01.601-05:00  INFO 6476 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2006 ms
-2025-06-08T20:34:01.820-05:00  INFO 6476 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2025-06-08T20:34:01.918-05:00  INFO 6476 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
-2025-06-08T20:34:01.968-05:00  INFO 6476 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2025-06-08T20:34:02.497-05:00  INFO 6476 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2025-06-08T20:34:02.559-05:00  INFO 6476 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2025-06-08T20:34:04.540-05:00  INFO 6476 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6fd9dbe6
-2025-06-08T20:34:04.542-05:00  INFO 6476 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2025-06-08T20:34:04.704-05:00  WARN 6476 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2025-06-08T20:34:04.968-05:00  INFO 6476 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+2025-06-10T00:14:42.467-05:00  INFO 7068 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-06-10T00:14:42.904-05:00  INFO 7068 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-06-10T00:14:43.827-05:00  INFO 7068 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:14:43.837-05:00  INFO 7068 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-06-10T00:14:53.849-05:00  WARN 7068 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.pool.HikariPool        : Timed-out waiting for close connection executor to shutdown
+2025-06-10T00:14:53.850-05:00  INFO 7068 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-06-10T00:17:21.672-05:00  INFO 20148 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 20148 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
+2025-06-10T00:17:21.675-05:00  INFO 20148 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
+2025-06-10T00:17:22.879-05:00  INFO 20148 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-06-10T00:17:23.173-05:00  INFO 20148 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 282 ms. Found 2 JPA repository interfaces.
+2025-06-10T00:17:23.923-05:00  INFO 20148 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-06-10T00:17:23.941-05:00  INFO 20148 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-06-10T00:17:23.941-05:00  INFO 20148 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2025-06-10T00:17:24.022-05:00  INFO 20148 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-06-10T00:17:24.023-05:00  INFO 20148 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2280 ms
+2025-06-10T00:17:24.268-05:00  INFO 20148 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-06-10T00:17:24.386-05:00  INFO 20148 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
+2025-06-10T00:17:24.441-05:00  INFO 20148 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-06-10T00:17:24.914-05:00  INFO 20148 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-06-10T00:17:24.964-05:00  INFO 20148 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-06-10T00:17:27.784-05:00  INFO 20148 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@459bf87c
+2025-06-10T00:17:27.786-05:00  INFO 20148 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-06-10T00:17:27.948-05:00  WARN 20148 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-06-10T00:17:28.210-05:00  INFO 20148 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
 	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
 	Database driver: undefined/unknown
 	Database version: 17.4
@@ -209,110 +29,43 @@ Consider defining a bean of type 'com.glp.glpDP1.repository.PedidoRepository' in
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2025-06-08T20:34:07.033-05:00  INFO 6476 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2025-06-08T20:34:07.887-05:00  INFO 6476 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T20:34:07.967-05:00  INFO 6476 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T20:34:07.971-05:00  INFO 6476 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:34:07.974-05:00  INFO 6476 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T20:34:07.974-05:00  INFO 6476 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T20:34:07.977-05:00  INFO 6476 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:34:08.631-05:00  WARN 6476 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2025-06-08T20:34:09.570-05:00  INFO 6476 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2025-06-08T20:34:09.753-05:00  INFO 6476 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2025-06-08T20:34:09.770-05:00  INFO 6476 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 10.796 seconds (process running for 11.615)
-2025-06-08T20:34:32.103-05:00  INFO 6476 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2025-06-08T20:34:32.104-05:00  INFO 6476 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2025-06-08T20:34:32.107-05:00  INFO 6476 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
-2025-06-08T20:34:32.225-05:00 ERROR 6476 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class com.glp.glpDP1.domain.Pedido]] with root cause
-
-com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Cannot construct instance of `com.glp.glpDP1.domain.Pedido` (no Creators, like default constructor, exist): cannot deserialize from Object value (no delegate- or property-based Creator)
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 2, column: 3]
-	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:67) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.reportBadDefinition(DeserializationContext.java:1888) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DatabindContext.reportBadDefinition(DatabindContext.java:414) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.handleMissingInstantiator(DeserializationContext.java:1375) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1512) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:348) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader._bindAndClose(ObjectReader.java:2131) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader.readValue(ObjectReader.java:1501) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:398) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:357) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:204) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:176) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:150) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1740) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2025-06-08T20:35:26.167-05:00  INFO 6476 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2025-06-08T20:35:26.177-05:00  INFO 6476 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2025-06-08T20:35:26.235-05:00  INFO 6476 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T20:35:26.245-05:00  INFO 6476 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2025-06-08T20:35:27.462-05:00  INFO 6476 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
-2025-06-08T20:35:50.902-05:00  INFO 12464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 12464 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T20:35:50.904-05:00  INFO 12464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T20:35:55.046-05:00  INFO 12464 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2025-06-08T20:35:55.774-05:00  INFO 12464 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 714 ms. Found 1 JPA repository interface.
-2025-06-08T20:35:56.482-05:00  INFO 12464 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T20:35:56.503-05:00  INFO 12464 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T20:35:56.503-05:00  INFO 12464 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T20:35:56.574-05:00  INFO 12464 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T20:35:56.574-05:00  INFO 12464 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5522 ms
-2025-06-08T20:35:56.865-05:00  INFO 12464 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2025-06-08T20:35:56.960-05:00  INFO 12464 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
-2025-06-08T20:35:57.008-05:00  INFO 12464 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2025-06-08T20:35:57.470-05:00  INFO 12464 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2025-06-08T20:35:57.517-05:00  INFO 12464 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2025-06-08T20:35:59.488-05:00  INFO 12464 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@67e4928c
-2025-06-08T20:35:59.489-05:00  INFO 12464 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2025-06-08T20:35:59.669-05:00  WARN 12464 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2025-06-08T20:35:59.936-05:00  INFO 12464 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+2025-06-10T00:17:29.287-05:00  INFO 20148 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-06-10T00:17:30.787-05:00  INFO 20148 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:17:31.134-05:00  INFO 20148 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
+2025-06-10T00:17:31.138-05:00  INFO 20148 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:17:31.141-05:00  INFO 20148 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
+2025-06-10T00:17:31.141-05:00  INFO 20148 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
+2025-06-10T00:17:31.144-05:00  INFO 20148 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:17:31.447-05:00  WARN 20148 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-06-10T00:17:32.169-05:00  INFO 20148 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
+2025-06-10T00:17:32.306-05:00  INFO 20148 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-06-10T00:17:32.314-05:00  INFO 20148 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 11.627 seconds (process running for 12.559)
+2025-06-10T00:21:04.889-05:00  INFO 20148 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-06-10T00:21:04.889-05:00  INFO 20148 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-06-10T00:21:04.891-05:00  INFO 20148 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2025-06-10T00:22:49.209-05:00  INFO 20148 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-06-10T00:22:49.218-05:00  INFO 20148 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-06-10T00:22:49.274-05:00  INFO 20148 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:22:49.278-05:00  INFO 20148 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-06-10T00:22:58.464-05:00  INFO 20148 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-06-10T00:23:07.614-05:00  INFO 9728 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 9728 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
+2025-06-10T00:23:07.617-05:00  INFO 9728 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
+2025-06-10T00:23:09.278-05:00  INFO 9728 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-06-10T00:23:09.524-05:00  INFO 9728 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 223 ms. Found 2 JPA repository interfaces.
+2025-06-10T00:23:10.371-05:00  INFO 9728 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-06-10T00:23:10.404-05:00  INFO 9728 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-06-10T00:23:10.404-05:00  INFO 9728 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2025-06-10T00:23:10.556-05:00  INFO 9728 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-06-10T00:23:10.557-05:00  INFO 9728 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2888 ms
+2025-06-10T00:23:10.854-05:00  INFO 9728 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-06-10T00:23:11.051-05:00  INFO 9728 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
+2025-06-10T00:23:11.160-05:00  INFO 9728 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-06-10T00:23:11.690-05:00  INFO 9728 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-06-10T00:23:11.735-05:00  INFO 9728 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-06-10T00:23:13.663-05:00  INFO 9728 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5f2b9da8
+2025-06-10T00:23:13.666-05:00  INFO 9728 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-06-10T00:23:13.842-05:00  WARN 9728 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-06-10T00:23:14.114-05:00  INFO 9728 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
 	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
 	Database driver: undefined/unknown
 	Database version: 17.4
@@ -320,178 +73,22 @@ com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Cannot construct 
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2025-06-08T20:36:01.009-05:00  INFO 12464 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2025-06-08T20:36:01.870-05:00  INFO 12464 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T20:36:01.941-05:00  INFO 12464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T20:36:01.944-05:00  INFO 12464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:36:01.947-05:00  INFO 12464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T20:36:01.948-05:00  INFO 12464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T20:36:01.951-05:00  INFO 12464 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T20:36:02.454-05:00  WARN 12464 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2025-06-08T20:36:03.312-05:00  INFO 12464 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2025-06-08T20:36:03.504-05:00  INFO 12464 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2025-06-08T20:36:03.510-05:00  INFO 12464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 13.642 seconds (process running for 14.803)
-2025-06-08T20:36:12.713-05:00  INFO 12464 --- [Glp_Project] [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2025-06-08T20:36:12.714-05:00  INFO 12464 --- [Glp_Project] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2025-06-08T20:36:12.717-05:00  INFO 12464 --- [Glp_Project] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
-2025-06-08T20:36:12.833-05:00 ERROR 12464 --- [Glp_Project] [http-nio-8080-exec-2] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class com.glp.glpDP1.domain.Pedido]] with root cause
-
-com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Cannot construct instance of `com.glp.glpDP1.domain.Pedido` (no Creators, like default constructor, exist): cannot deserialize from Object value (no delegate- or property-based Creator)
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 2, column: 3]
-	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:67) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.reportBadDefinition(DeserializationContext.java:1888) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DatabindContext.reportBadDefinition(DatabindContext.java:414) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.DeserializationContext.handleMissingInstantiator(DeserializationContext.java:1375) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1512) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:348) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader._bindAndClose(ObjectReader.java:2131) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at com.fasterxml.jackson.databind.ObjectReader.readValue(ObjectReader.java:1501) ~[jackson-databind-2.18.3.jar:2.18.3]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:398) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:357) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:204) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:176) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:150) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.6.jar:6.2.6]
-	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.40.jar:6.0]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.6.jar:6.2.6]
-	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1740) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.40.jar:10.1.40]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2025-06-08T20:44:49.647-05:00  INFO 12464 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2025-06-08T20:44:49.668-05:00  INFO 12464 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2025-06-08T20:44:49.764-05:00  INFO 12464 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T20:44:49.778-05:00  INFO 12464 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2025-06-08T20:44:59.789-05:00  WARN 12464 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.pool.HikariPool        : Timed-out waiting for close connection executor to shutdown
-2025-06-08T20:44:59.789-05:00  INFO 12464 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
-2025-06-08T21:34:01.203-05:00  INFO 6272 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 6272 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T21:34:01.208-05:00  INFO 6272 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T21:34:03.404-05:00  INFO 6272 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2025-06-08T21:34:03.654-05:00  INFO 6272 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 238 ms. Found 1 JPA repository interface.
-2025-06-08T21:34:04.607-05:00  INFO 6272 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T21:34:04.629-05:00  INFO 6272 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T21:34:04.629-05:00  INFO 6272 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T21:34:04.711-05:00  INFO 6272 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T21:34:04.711-05:00  INFO 6272 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3214 ms
-2025-06-08T21:34:04.979-05:00  INFO 6272 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2025-06-08T21:34:05.096-05:00  INFO 6272 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
-2025-06-08T21:34:05.159-05:00  INFO 6272 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2025-06-08T21:34:05.590-05:00  INFO 6272 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2025-06-08T21:34:05.639-05:00  INFO 6272 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2025-06-08T21:34:09.097-05:00  INFO 6272 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6fd9dbe6
-2025-06-08T21:34:09.099-05:00  INFO 6272 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2025-06-08T21:34:09.351-05:00  WARN 6272 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2025-06-08T21:34:09.614-05:00  INFO 6272 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
-	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
-	Database driver: undefined/unknown
-	Database version: 17.4
-	Autocommit mode: undefined/unknown
-	Isolation level: undefined/unknown
-	Minimum pool size: undefined/unknown
-	Maximum pool size: undefined/unknown
-2025-06-08T21:34:10.905-05:00  INFO 6272 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2025-06-08T21:34:11.826-05:00  INFO 6272 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T21:34:11.903-05:00  INFO 6272 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T21:34:11.907-05:00  INFO 6272 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T21:34:11.911-05:00  INFO 6272 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T21:34:11.911-05:00  INFO 6272 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T21:34:11.914-05:00  INFO 6272 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T21:34:12.487-05:00  WARN 6272 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2025-06-08T21:34:13.361-05:00  INFO 6272 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2025-06-08T21:34:13.512-05:00  INFO 6272 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2025-06-08T21:34:13.519-05:00  INFO 6272 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 13.054 seconds (process running for 14.358)
-2025-06-08T21:34:17.670-05:00  INFO 6272 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2025-06-08T21:34:17.671-05:00  INFO 6272 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2025-06-08T21:34:17.672-05:00  INFO 6272 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2025-06-08T21:36:18.683-05:00  INFO 6272 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2025-06-08T21:36:18.693-05:00  INFO 6272 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2025-06-08T21:36:18.770-05:00  INFO 6272 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T21:36:18.773-05:00  INFO 6272 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2025-06-08T21:36:19.960-05:00  INFO 6272 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
-2025-06-08T22:54:21.639-05:00  INFO 5464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 5464 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
-2025-06-08T22:54:21.643-05:00  INFO 5464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
-2025-06-08T22:54:23.311-05:00  INFO 5464 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2025-06-08T22:54:23.867-05:00  INFO 5464 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 527 ms. Found 1 JPA repository interface.
-2025-06-08T22:54:25.389-05:00  INFO 5464 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2025-06-08T22:54:25.454-05:00  INFO 5464 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2025-06-08T22:54:25.456-05:00  INFO 5464 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2025-06-08T22:54:25.704-05:00  INFO 5464 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2025-06-08T22:54:25.705-05:00  INFO 5464 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3961 ms
-2025-06-08T22:54:26.197-05:00  INFO 5464 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2025-06-08T22:54:26.356-05:00  INFO 5464 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
-2025-06-08T22:54:26.482-05:00  INFO 5464 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2025-06-08T22:54:27.308-05:00  INFO 5464 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2025-06-08T22:54:27.401-05:00  INFO 5464 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2025-06-08T22:54:30.232-05:00  INFO 5464 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@7cdc4070
-2025-06-08T22:54:30.236-05:00  INFO 5464 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2025-06-08T22:54:30.453-05:00  WARN 5464 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2025-06-08T22:54:30.755-05:00  INFO 5464 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
-	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
-	Database driver: undefined/unknown
-	Database version: 17.4
-	Autocommit mode: undefined/unknown
-	Isolation level: undefined/unknown
-	Minimum pool size: undefined/unknown
-	Maximum pool size: undefined/unknown
-2025-06-08T22:54:33.338-05:00  INFO 5464 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2025-06-08T22:54:34.246-05:00  INFO 5464 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T22:54:34.580-05:00  INFO 5464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
-2025-06-08T22:54:34.595-05:00  INFO 5464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T22:54:34.604-05:00  INFO 5464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
-2025-06-08T22:54:34.605-05:00  INFO 5464 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
-2025-06-08T22:54:34.612-05:00  INFO 5464 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
-2025-06-08T22:54:35.904-05:00  WARN 5464 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2025-06-08T22:54:37.591-05:00  INFO 5464 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2025-06-08T22:54:37.847-05:00  INFO 5464 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2025-06-08T22:54:37.865-05:00  INFO 5464 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 17.329 seconds (process running for 19.65)
-2025-06-08T22:54:56.455-05:00  INFO 5464 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2025-06-08T22:54:56.458-05:00  INFO 5464 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2025-06-08T22:54:56.463-05:00  INFO 5464 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
-2025-06-08T22:55:41.586-05:00  INFO 5464 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2025-06-08T22:55:41.606-05:00  INFO 5464 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2025-06-08T22:55:41.728-05:00  INFO 5464 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
-2025-06-08T22:55:41.734-05:00  INFO 5464 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2025-06-08T22:55:42.955-05:00  INFO 5464 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-06-10T00:23:15.215-05:00  INFO 9728 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-06-10T00:23:15.751-05:00  INFO 9728 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:23:16.033-05:00  INFO 9728 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
+2025-06-10T00:23:16.037-05:00  INFO 9728 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:23:16.042-05:00  INFO 9728 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
+2025-06-10T00:23:16.042-05:00  INFO 9728 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
+2025-06-10T00:23:16.044-05:00  INFO 9728 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:23:16.290-05:00  WARN 9728 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-06-10T00:23:17.000-05:00  INFO 9728 --- [Glp_Project] [main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
+2025-06-10T00:23:17.112-05:00  INFO 9728 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-06-10T00:23:17.121-05:00  INFO 9728 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 10.088 seconds (process running for 11.006)
+2025-06-10T00:24:57.766-05:00  INFO 9728 --- [Glp_Project] [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-06-10T00:24:57.767-05:00  INFO 9728 --- [Glp_Project] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-06-10T00:24:57.769-05:00  INFO 9728 --- [Glp_Project] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2025-06-10T00:28:51.740-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-06-10T00:28:51.764-05:00  INFO 9728 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-06-10T00:28:51.927-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:28:51.954-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-06-10T00:29:01.177-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
