@@ -29,32 +29,31 @@ public class FileServiceImpl implements FileService {
 
     private final DataRepository dataRepository;
 
-    private static final Pattern FECHA_HORA_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m");
     private static final Pattern FECHA_HORA_RANGO_PATTERN = Pattern.compile("(\\d+)d(\\d+)h(\\d+)m-(\\d+)d(\\d+)h(\\d+)m");
 
-    public List<Pedido> cargarPedidosPorDia(InputStream inputStream,LocalDateTime fechaReferencia){
-        List<Pedido> todosPedidos = cargarPedidos(inputStream);
+    public List<Pedido> cargarPedidosPorDia(InputStream inputStream, LocalDateTime fechaReferencia, String nombreArchivo) {
+        List<Pedido> todosPedidos = cargarPedidos(inputStream, nombreArchivo);
 
-        return todosPedidos.stream().filter(pedido -> esMismoDia(pedido.getHoraRecepcion(),fechaReferencia)).collect(Collectors.toList());
+        return todosPedidos.stream().filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), fechaReferencia)).collect(Collectors.toList());
     }
 
-    public List<Pedido> cargarPedidosSemExp(InputStream inputStream,LocalDateTime fechaInicio, LocalDateTime fechaFin){
-        List<Pedido> todoPedidos = cargarPedidos(inputStream);
+    public List<Pedido> cargarPedidosSemExp(InputStream inputStream, LocalDateTime fechaInicio, LocalDateTime fechaFin, String nombreArchivo) {
+        List<Pedido> todoPedidos = cargarPedidos(inputStream, nombreArchivo);
 
         return todoPedidos.stream().filter(pedido -> esDentroDelPeriodo(pedido.getHoraRecepcion(), fechaInicio, fechaFin)).collect(Collectors.toList());
     }
 
     // Nuevo método - Cargar pedidos por semana
-    public List<Pedido> cargarPedidosPorSemana(InputStream inputStream, LocalDateTime fechaReferencia) {
-        List<Pedido> todosPedidos = cargarPedidos(inputStream);
-        
+    public List<Pedido> cargarPedidosPorSemana(InputStream inputStream, LocalDateTime fechaReferencia, String nombreArchivo) {
+        List<Pedido> todosPedidos = cargarPedidos(inputStream, nombreArchivo);
+
         // Calcular el inicio y fin de la semana (lunes a domingo)
         LocalDateTime inicioDeSemana = fechaReferencia.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 .withHour(0).withMinute(0).withSecond(0);
         LocalDateTime finDeSemana = inicioDeSemana.plusDays(7).minusNanos(1);
-        
+
         log.info("Filtrando pedidos de la semana: {} a {}", inicioDeSemana, finDeSemana);
-        
+
         return todosPedidos.stream()
                 .filter(pedido -> esDentroDelPeriodo(pedido.getHoraRecepcion(), inicioDeSemana, finDeSemana))
                 .collect(Collectors.toList());
@@ -62,8 +61,8 @@ public class FileServiceImpl implements FileService {
 
     // Método auxiliar - Verificar si una fecha está dentro de un período
     private boolean esDentroDelPeriodo(LocalDateTime fecha, LocalDateTime inicio, LocalDateTime fin) {
-        return (fecha.isEqual(inicio) || fecha.isAfter(inicio)) && 
-               (fecha.isEqual(fin) || fecha.isBefore(fin));
+        return (fecha.isEqual(inicio) || fecha.isAfter(inicio)) &&
+                (fecha.isEqual(fin) || fecha.isBefore(fin));
     }
 
     private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
@@ -72,17 +71,20 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<Pedido> cargarPedidos(InputStream inputStream) {
+    public List<Pedido> cargarPedidos(InputStream inputStream, String nombreArchivo) {
         List<Pedido> pedidos = new ArrayList<>();
+        String base = nombreArchivo.replaceFirst("\\.[^.]+$", "");
+        String anioStr = base.replaceAll(".*(\\d{4})\\d{2}$", "$1");
+        String mesStr = base.replaceAll(".*\\d{4}(\\d{2})$", "$1");
+        int anio = Integer.parseInt(anioStr);
+        int mes = Integer.parseInt(mesStr);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    Pedido pedido = parsearLineaPedido(line);
-                    if (pedido != null) {
-                        pedidos.add(pedido);
-                    }
+                    Pedido pedido = parsearLineaPedido(line, anio, mes);
+                    pedidos.add(pedido);
                 } catch (Exception e) {
                     log.error("Error al parsear línea de pedido: {}", line, e);
                 }
@@ -102,17 +104,20 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<Bloqueo> cargarBloqueos(InputStream inputStream) {
+    public List<Bloqueo> cargarBloqueos(InputStream inputStream, String nombreArchivo) {
         List<Bloqueo> bloqueos = new ArrayList<>();
+        String base = nombreArchivo.replaceFirst("\\.[^.]+$", "");
+        String anioStr = base.replaceAll(".*(\\d{4})\\d{2}$", "$1");
+        String mesStr = base.replaceAll(".*\\d{4}(\\d{2})$", "$1");
+        int anio = Integer.parseInt(anioStr);
+        int mes = Integer.parseInt(mesStr);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    Bloqueo bloqueo = parsearLineaBloqueo(line);
-                    if (bloqueo != null) {
-                        bloqueos.add(bloqueo);
-                    }
+                    Bloqueo bloqueo = parsearLineaBloqueo(line, anio, mes);
+                    bloqueos.add(bloqueo);
                 } catch (Exception e) {
                     log.error("Error al parsear línea de bloqueo: {}", line, e);
                 }
@@ -136,7 +141,7 @@ public class FileServiceImpl implements FileService {
      * Formato: ##d##h##m:posX,posY,c-idCliente,m3,hLímite
      * Ejemplo: 01d00h06m:68,34,c-36,13m3,11h
      */
-    private Pedido parsearLineaPedido(String linea) {
+    private Pedido parsearLineaPedido(String linea, int anio, int mes) {
         String[] partes = linea.split(":");
         if (partes.length != 2) {
             throw new IllegalArgumentException("Formato de línea inválido: " + linea);
@@ -166,7 +171,7 @@ public class FileServiceImpl implements FileService {
         int horasLimite = Integer.parseInt(horasLimiteStr.replace("h", ""));
 
         // Crear el pedido
-        return new Pedido(idCliente, ubicacion, cantidadGLP, momentoStr, horasLimite);
+        return new Pedido(idCliente, ubicacion, cantidadGLP, momentoStr, anio, mes, horasLimite);
     }
 
     /**
@@ -174,7 +179,7 @@ public class FileServiceImpl implements FileService {
      * Formato: ##d##h##m-##d##h##m:x1,y1,x2,y2,...
      * Ejemplo: 01d00h28m-01d20h48m:05,20,05,35
      */
-    private Bloqueo parsearLineaBloqueo(String linea) {
+    private Bloqueo parsearLineaBloqueo(String linea, int anio, int mes) {
         String[] partes = linea.split(":");
         if (partes.length != 2) {
             throw new IllegalArgumentException("Formato de línea inválido: " + linea);
@@ -194,13 +199,8 @@ public class FileServiceImpl implements FileService {
         int horaFin = Integer.parseInt(matcher.group(5));
         int minutoFin = Integer.parseInt(matcher.group(6));
 
-        // Año y mes actuales
-        LocalDateTime ahora = LocalDateTime.now();
-        int year = ahora.getYear();
-        int mes = ahora.getMonthValue();
-
-        LocalDateTime horaInicioVar = LocalDateTime.of(year, mes, diaInicio, horaInicio, minutoInicio);
-        LocalDateTime horaFinVar = LocalDateTime.of(year, mes, diaFin, horaFin, minutoFin);
+        LocalDateTime horaInicioVar = LocalDateTime.of(anio, mes, diaInicio, horaInicio, minutoInicio);
+        LocalDateTime horaFinVar = LocalDateTime.of(anio, mes, diaFin, horaFin, minutoFin);
 
         // Parsear coordenadas
         String[] coordenadasStr = partes[1].split(",");

@@ -15,7 +15,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AlgoritmoRequest {
-    private String tipoAlgoritmo; // "GENETICO" o "PSO"
     private List<Camion> camiones;
     private List<Pedido> pedidos;
     private Mapa mapa;
@@ -29,10 +28,4 @@ public class AlgoritmoRequest {
     private Double tasaCruce;
     private Integer elitismo;
 
-    // Parámetros para algoritmo PSO
-    private Integer numParticulas;
-    private Integer numIteraciones;
-    private Double w;  // Inercia
-    private Double c1; // Factor de aprendizaje cognitivo
-    private Double c2; // Factor de aprendizaje social
 }
