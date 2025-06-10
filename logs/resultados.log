@@ -92,3 +92,87 @@
 2025-06-10T00:28:51.927-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
 2025-06-10T00:28:51.954-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
 2025-06-10T00:29:01.177-05:00  INFO 9728 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-06-10T00:32:07.454-05:00  INFO 19472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 19472 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
+2025-06-10T00:32:07.459-05:00 DEBUG 19472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Running with Spring Boot v3.4.5, Spring v6.2.6
+2025-06-10T00:32:07.460-05:00  INFO 19472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
+2025-06-10T00:32:08.534-05:00  INFO 19472 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-06-10T00:32:08.634-05:00  INFO 19472 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 86 ms. Found 2 JPA repository interfaces.
+2025-06-10T00:32:09.344-05:00  INFO 19472 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-06-10T00:32:09.363-05:00  INFO 19472 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-06-10T00:32:09.364-05:00  INFO 19472 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2025-06-10T00:32:09.426-05:00  INFO 19472 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-06-10T00:32:09.426-05:00  INFO 19472 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1901 ms
+2025-06-10T00:32:09.718-05:00  INFO 19472 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-06-10T00:32:09.848-05:00  INFO 19472 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
+2025-06-10T00:32:09.910-05:00  INFO 19472 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-06-10T00:32:10.384-05:00  INFO 19472 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-06-10T00:32:10.427-05:00  INFO 19472 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-06-10T00:32:13.206-05:00  INFO 19472 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@7f305f34
+2025-06-10T00:32:13.208-05:00  INFO 19472 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-06-10T00:32:13.427-05:00  WARN 19472 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-06-10T00:32:13.707-05:00  INFO 19472 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-06-10T00:32:14.935-05:00  INFO 19472 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-06-10T00:32:15.557-05:00  INFO 19472 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:32:15.934-05:00  INFO 19472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
+2025-06-10T00:32:15.936-05:00  INFO 19472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:32:15.940-05:00  INFO 19472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
+2025-06-10T00:32:15.941-05:00  INFO 19472 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
+2025-06-10T00:32:15.946-05:00  INFO 19472 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:32:16.225-05:00  WARN 19472 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-06-10T00:32:17.357-05:00  INFO 19472 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-06-10T00:32:17.389-05:00  INFO 19472 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 10.57 seconds (process running for 11.95)
+2025-06-10T00:32:27.385-05:00  INFO 19472 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-06-10T00:32:27.386-05:00  INFO 19472 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-06-10T00:32:27.389-05:00  INFO 19472 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2025-06-10T00:37:18.075-05:00  INFO 19472 --- [Glp_Project] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-06-10T00:37:18.089-05:00  INFO 19472 --- [Glp_Project] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-06-10T00:37:18.098-05:00  INFO 19472 --- [Glp_Project] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:37:18.117-05:00  INFO 19472 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-06-10T00:37:28.135-05:00  WARN 19472 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.pool.HikariPool        : Timed-out waiting for close connection executor to shutdown
+2025-06-10T00:37:28.136-05:00  INFO 19472 --- [Glp_Project] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-06-10T00:40:33.582-05:00  INFO 18248 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Starting GlpProjectApplication using Java 21.0.2 with PID 18248 (C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms\build\classes\java\main started by jorda in C:\Users\jorda\Desktop\Nuevo Back\glp-algorithms)
+2025-06-10T00:40:33.586-05:00 DEBUG 18248 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Running with Spring Boot v3.4.5, Spring v6.2.6
+2025-06-10T00:40:33.588-05:00  INFO 18248 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : No active profile set, falling back to 1 default profile: "default"
+2025-06-10T00:40:40.605-05:00  INFO 18248 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-06-10T00:40:40.759-05:00  INFO 18248 --- [Glp_Project] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 136 ms. Found 2 JPA repository interfaces.
+2025-06-10T00:40:41.674-05:00  INFO 18248 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-06-10T00:40:41.701-05:00  INFO 18248 --- [Glp_Project] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-06-10T00:40:41.703-05:00  INFO 18248 --- [Glp_Project] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2025-06-10T00:40:41.772-05:00  INFO 18248 --- [Glp_Project] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-06-10T00:40:41.773-05:00  INFO 18248 --- [Glp_Project] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 8054 ms
+2025-06-10T00:40:42.108-05:00  INFO 18248 --- [Glp_Project] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-06-10T00:40:42.357-05:00  INFO 18248 --- [Glp_Project] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
+2025-06-10T00:40:42.472-05:00  INFO 18248 --- [Glp_Project] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-06-10T00:40:43.684-05:00  INFO 18248 --- [Glp_Project] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-06-10T00:40:43.777-05:00  INFO 18248 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-06-10T00:40:48.676-05:00  INFO 18248 --- [Glp_Project] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@261275ae
+2025-06-10T00:40:48.678-05:00  INFO 18248 --- [Glp_Project] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-06-10T00:40:48.845-05:00  WARN 18248 --- [Glp_Project] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-06-10T00:40:49.098-05:00  INFO 18248 --- [Glp_Project] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-06-10T00:40:50.380-05:00  INFO 18248 --- [Glp_Project] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-06-10T00:40:50.954-05:00  INFO 18248 --- [Glp_Project] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-06-10T00:40:51.412-05:00  INFO 18248 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Inicializando datos de la aplicación...
+2025-06-10T00:40:51.422-05:00  INFO 18248 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:40:51.428-05:00  INFO 18248 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Camiones inicializados: 20 unidades
+2025-06-10T00:40:51.429-05:00  INFO 18248 --- [Glp_Project] [main] c.g.g.services.impl.InitServiceImpl      : Almacenes inicializados: 3 unidades
+2025-06-10T00:40:51.437-05:00  INFO 18248 --- [Glp_Project] [main] c.g.g.services.impl.MapaServiceImpl      : Mapa inicializado: 70x50
+2025-06-10T00:40:51.794-05:00  WARN 18248 --- [Glp_Project] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-06-10T00:40:55.222-05:00  INFO 18248 --- [Glp_Project] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-06-10T00:40:55.233-05:00  INFO 18248 --- [Glp_Project] [main] com.glp.glpDP1.GlpProjectApplication     : Started GlpProjectApplication in 22.921 seconds (process running for 24.814)
+2025-06-10T00:41:27.981-05:00  INFO 18248 --- [Glp_Project] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-06-10T00:41:27.981-05:00  INFO 18248 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-06-10T00:41:27.983-05:00  INFO 18248 --- [Glp_Project] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms

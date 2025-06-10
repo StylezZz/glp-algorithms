@@ -4,7 +4,7 @@ import com.glp.glpDP1.api.dto.request.PedidoRequest;
 import com.glp.glpDP1.api.dto.response.PedidoResponse;
 import com.glp.glpDP1.domain.Pedido;
 import com.glp.glpDP1.domain.Ubicacion;
-import com.glp.glpDP1.mapper.PedidoDtoMapper;
+import com.glp.glpDP1.persistence.mapper.PedidoDtoMapper;
 import com.glp.glpDP1.persistence.entity.PedidoEntity;
 import com.glp.glpDP1.persistence.mapper.PedidoMapper;
 import com.glp.glpDP1.repository.PedidoRepository;
