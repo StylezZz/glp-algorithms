@@ -154,4 +154,23 @@ public class AveriaService {
         
         return resultado;
     }
+
+    /**
+     * Persiste una avería que acaba de ocurrir (WebSocket, REST, test…).
+     * Si ya existe una avería programada para el mismo turno y camión la reemplaza,
+     * pues significa que acaba de suceder.
+     */
+    public void registrarAveria(String codigoCamion,
+                                TipoIncidente tipoIncidente,
+                                LocalDateTime momento) {
+
+        Turno turnoActual = Turno.obtenerTurnoPorHora(momento.getHour());
+        String key = turnoActual + "_" + codigoCamion;
+
+        averiasRegistradas.put(key, tipoIncidente);      // sobre-escribe o crea entrada
+        registrarAveriaOcurrida(codigoCamion, momento);  // marcar como atendida hoy
+        log.info("Avería guardada: {} – {} – {}", turnoActual, codigoCamion, tipoIncidente);
+    }
+
+
 }

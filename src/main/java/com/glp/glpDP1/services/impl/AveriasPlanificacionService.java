@@ -246,4 +246,56 @@ public class AveriasPlanificacionService {
         historialAverias.clear();
         log.info("Historial de averías limpiado");
     }
+
+
+    /**
+     * Registra una avería “online” (proveniente de WebSocket) para un camión.
+     *
+     * @param codigoCamion  código único del camión afectado
+     * @param tipoIncidente tipo de avería (NEUMATICO, MOTOR, ELECTRICO, …)
+     * @param momento       instante exacto de la avería (LocalDateTime.now() si se omite)
+     * @return un Map con los datos consolidados que puede enviarse de vuelta al cliente
+     */
+    public Map<String, Object> registrarAveriaOnline(String codigoCamion,
+                                                     TipoIncidente tipoIncidente,
+                                                     LocalDateTime momento) {
+
+        // -------- 1. Validaciones básicas --------
+        Objects.requireNonNull(codigoCamion, "El código de camión es obligatorio");
+        Objects.requireNonNull(tipoIncidente, "El tipo de avería es obligatorio");
+        if (momento == null) momento = LocalDateTime.now();
+
+        Camion camion = dataRepository.buscarCamion(codigoCamion);
+        if (camion == null) {
+            throw new IllegalArgumentException("Camión no encontrado: " + codigoCamion);
+        }
+
+        // Evitar duplicados dentro del mismo turno
+        if (averiaService.tieneProgramadaAveria(codigoCamion, momento)) {
+            log.warn("Se descartó avería duplicada para {} a las {}", codigoCamion, momento);
+            return Map.of("duplicada", true);
+        }
+
+        // -------- 2. Persistir la avería --------
+        averiaService.registrarAveria(codigoCamion, tipoIncidente, momento);
+
+        // -------- 3. Actualizar estado del camión --------
+        camion.setEstado(EstadoCamion.AVERIADO);
+        camion.setMotivoEstado("Avería " + tipoIncidente);
+        camion.setHoraFinEstadoEstimado(momento.plusHours( tipoIncidente.getHorasReparacion() ));
+
+        // -------- 4. Armar respuesta para el dashboard --------
+        Map<String, Object> registro = crearRegistroAveria(
+                camion,
+                tipoIncidente,
+                momento,
+                camion.getUbicacionActual(),
+                "WEBSOCKET"
+        );
+        historialAverias.add(registro);
+
+        log.info("Avería online registrada: {} – {} a las {}", codigoCamion, tipoIncidente, momento);
+        return registro;
+    }
+
 }

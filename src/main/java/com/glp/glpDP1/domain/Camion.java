@@ -37,6 +37,8 @@ public class Camion {
     private TipoIncidente tipoAveriaActual;
     private LocalDateTime horaFinInmovilizacion;
     private LocalDateTime horaDisponibilidad;
+    private String motivoEstado;
+    private LocalDateTime horaFinEstadoEstimado;
 
     public Camion(String codigo, TipoCamion tipo, Ubicacion ubicacionInicial) {
         this.codigo = codigo;
