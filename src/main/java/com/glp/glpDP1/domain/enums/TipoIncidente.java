@@ -1,7 +1,9 @@
 package com.glp.glpDP1.domain.enums;
 
 public enum TipoIncidente {
-    TI1, // 2h inmovilizado, luego disponible
-    TI2, // 2h inmovilizado, luego indisponible por un turno
-    TI3  // 4h inmovilizado, luego indisponible por 3 días
+    TI1(2), TI2(6), TI3(72);   // ejemplo
+
+    private final int horasReparacion;
+    TipoIncidente(int horasReparacion) { this.horasReparacion = horasReparacion; }
+    public int getHorasReparacion() { return horasReparacion; }
 }

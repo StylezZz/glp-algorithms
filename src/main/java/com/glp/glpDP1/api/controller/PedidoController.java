@@ -1,14 +1,15 @@
 package com.glp.glpDP1.api.controller;
 
-import com.glp.glpDP1.domain.Pedido;
+import com.glp.glpDP1.api.dto.request.PedidoRequest;
+import com.glp.glpDP1.api.dto.response.PedidoResponse;
+import com.glp.glpDP1.services.PedidoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -17,57 +18,36 @@ import java.util.List;
 @Slf4j
 public class PedidoController {
 
-    // En una implementación real, aquí se inyectaría un PedidoService
-    // private final PedidoService pedidoService;
+    private final PedidoService pedidoService;
 
-    // Para simplificar, usamos una lista en memoria
-    private final List<Pedido> pedidos = new ArrayList<>();
-
-    /**
-     * Obtiene todos los pedidos pendientes
-     */
+    // GET: Lista todos los pedidos
     @GetMapping
-    public ResponseEntity<List<Pedido>> obtenerPedidos() {
-        return ResponseEntity.ok(pedidos);
+    public ResponseEntity<List<PedidoResponse>> obtenerPedidos() {
+        return ResponseEntity.ok(pedidoService.listarPedidos());
     }
 
-    /**
-     * Crea un nuevo pedido
-     */
+    // POST: Crea un nuevo pedido
     @PostMapping
-    public ResponseEntity<Pedido> crearPedido(@RequestBody Pedido pedido) {
+    public ResponseEntity<PedidoResponse> crearPedido(@RequestBody PedidoRequest request) {
+        PedidoResponse creado = pedidoService.guardarPedido(request);
+        return ResponseEntity.ok(creado);
+    }
+
+    // GET: Filtra pedidos por cliente
+    @GetMapping("/cliente/{idCliente}")
+    public ResponseEntity<List<PedidoResponse>> buscarPorCliente(@PathVariable String idCliente) {
+        return ResponseEntity.ok(pedidoService.buscarPorCliente(idCliente));
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<String> uploadPedidos(@RequestParam("file") MultipartFile file) {
         try {
-            // En una implementación real, aquí se guardaría en la base de datos
-            pedidos.add(pedido);
-            return ResponseEntity.status(HttpStatus.CREATED).body(pedido);
+            pedidoService.procesarArchivoPedidos(file);
+            return ResponseEntity.ok("Archivo procesado correctamente");
         } catch (Exception e) {
-            log.error("Error al crear pedido: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear el pedido", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error al procesar archivo: " + e.getMessage());
         }
     }
 
-    /**
-     * Obtiene un pedido por su ID
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Pedido> obtenerPedido(@PathVariable String id) {
-        return pedidos.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
-    }
 
-    /**
-     * Elimina un pedido
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarPedido(@PathVariable String id) {
-        boolean removed = pedidos.removeIf(p -> p.getId().equals(id));
-        if (removed) {
-            return ResponseEntity.noContent().build();
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado");
-        }
-    }
 }
