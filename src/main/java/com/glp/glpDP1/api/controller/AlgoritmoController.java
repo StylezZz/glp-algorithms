@@ -303,7 +303,7 @@ public class AlgoritmoController {
     @PostMapping("/start-semanal")
     public ResponseEntity<String> iniciarAlgoritmoSemanal(@RequestBody AlgoritmoSimpleRequest request) {
         try {
-            log.info("Iniciando algoritmo semanal");
+            log.info("Iniciando algoritmo. Tipo: {}, Fecha: {}", request.getTipoSimulador(), request.getFecha());
             String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoSemanal(request);
             return ResponseEntity.ok(id);
         } catch (IllegalStateException e) {

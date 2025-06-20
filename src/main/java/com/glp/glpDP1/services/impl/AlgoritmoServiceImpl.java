@@ -8,6 +8,7 @@ import com.glp.glpDP1.api.dto.response.AlgoritmoStatusResponse;
 import com.glp.glpDP1.domain.*;
 import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.DataRepository;
+import com.glp.glpDP1.repository.PedidoRepository;
 import com.glp.glpDP1.services.AlgoritmoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,9 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
 
     // Executor para ejecutar los algoritmos de forma asíncrona
     private final ExecutorService executor = Executors.newFixedThreadPool(5);
+
+    //
+    private final PedidoRepository pedidoRepository;
 
     @Override
     public String iniciarAlgoritmo(AlgoritmoRequest request) {
@@ -127,6 +131,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
     private String iniciarEjecucionAlgoritmo(
             List<Camion> camiones,
             List<Pedido> pedidos,
+            List<Bloqueo> bloqueos,
             Mapa mapa,
             LocalDateTime momentoActual,
             EscenarioSimulacion escenario,
@@ -402,81 +407,45 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
      * Inicia una ejecución del algoritmo considerando pedidos de la semana actual
      */
     public String iniciarAlgoritmoSemanal(AlgoritmoSimpleRequest request) {
-        // Obtener datos del repositorio
-        List<Camion> camiones = dataRepository.obtenerCamiones();
-        Mapa mapa = dataRepository.obtenerMapa();
 
-        // Obtener todos los pedidos
-        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
-
-        // Filtrar pedidos de la semana
-        LocalDateTime inicioDeSemana = request.getMomentoActual() != null ? request.getMomentoActual() : LocalDateTime.now();
-        LocalDateTime finDeSemana = inicioDeSemana.plusDays(7);
-        System.out.println("Inicio de semana: " + inicioDeSemana);
-        System.out.println("Fin de semana: " + finDeSemana);
-
-        List<Pedido> pedidosSemana = todosPedidos.stream()
-                .filter(pedido -> {
-                    LocalDateTime fechaPedido = pedido.getHoraRecepcion();
-                    return !fechaPedido.isBefore(inicioDeSemana) && fechaPedido.isBefore(finDeSemana);
-                })
-                .collect(Collectors.toList());
-
-        log.info("Planificando rutas para {} pedidos de la semana", pedidosSemana.size());
-
-        // Si no hay pedidos en la semana, no iniciar algoritmo
-        if (pedidosSemana.isEmpty()) {
-            throw new IllegalStateException("No hay pedidos para la semana actual");
+        if (request.getTipoSimulador() == null || request.getTipoSimulador().isEmpty() || request.getFecha() == null) {
+        throw new IllegalArgumentException("Tipo de simulador y fecha son obligatorios");
         }
 
-        // Usar la implementación actual pero con los pedidos filtrados
-        return iniciarEjecucionAlgoritmo(
-                camiones,
-                pedidosSemana,
-                mapa,
-                inicioDeSemana,
-                EscenarioSimulacion.SEMANAL, // Usar escenario semanal
-                request.getTamañoPoblacion(),
-                request.getNumGeneraciones(),
-                request.getTasaMutacion(),
-                request.getTasaCruce(),
-                request.getElitismo()
-        );
-    }
-
-    private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
-        return fecha1.getYear() == fecha2.getYear() &&
-                fecha1.getDayOfYear() == fecha2.getDayOfYear();
-    }
-
-    /**
-     * Inicia una ejecución del algoritmo genético considerando solo pedidos del día actual
-     */
-    public String iniciarAlgoritmoGeneticoDiario(AlgoritmoSimpleRequest request) {
-        // Obtener datos del repositorio
         List<Camion> camiones = dataRepository.obtenerCamiones();
         Mapa mapa = dataRepository.obtenerMapa();
 
-        // Obtener todos los pedidos
-        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+        // Usar SP para traer pedidos y bloqueos
+        int tipo = "diario".equalsIgnoreCase(request.getTipoSimulador()) ? 1 : 2;
+        List<Object[]> pedidosSP = pedidoRepository.traerPedidos(tipo, request.getFecha());
+        List<Object[]> bloqueosSP = pedidoRepository.traerBloqueos(tipo, request.getFecha());
+        log.info("Pedidos traídos por SP: {}", pedidosSP.size());
+        log.info("Bloqueos traídos por SP: {}", bloqueosSP.size());
 
-        // Filtrar solo pedidos de hoy
+        // Mapear los Object[] a la entidad Pedido
+        List<Pedido> pedidos = pedidosSP.stream()
+            .map(this::mapearPedidoDesdeSP)
+            .collect(Collectors.toList());
+
+        // Mapear los Object[] a la entidad Bloqueo
+        List<Bloqueo> bloqueos = bloqueosSP.stream()
+            .map(this::mapearBloqueoDesdeSP)
+            .collect(Collectors.toList());
+
+        if (pedidos.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para este periodo seleccionado");
+        }
+
+        if (bloqueos.isEmpty()) {
+            throw new IllegalStateException("No hay bloqueos para este periodo seleccionado");
+        }
+
         LocalDateTime hoy = LocalDateTime.now();
-        List<Pedido> pedidosHoy = todosPedidos.stream()
-                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), hoy))
-                .collect(Collectors.toList());
 
-        log.info("Planificando rutas para {} pedidos del día de hoy con algoritmo genético", pedidosHoy.size());
-
-        // Si no hay pedidos hoy, no iniciar algoritmo
-        if (pedidosHoy.isEmpty()) {
-            throw new IllegalStateException("No hay pedidos para el día de hoy");
-        }
-
-        // Usar la implementación actual pero con los pedidos filtrados
         return iniciarEjecucionAlgoritmo(
                 camiones,
-                pedidosHoy,
+                pedidos,
+                bloqueos,
                 mapa,
                 hoy,
                 EscenarioSimulacion.DIA_A_DIA,
@@ -487,4 +456,56 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 request.getElitismo()
         );
     }
+    
+
+    private boolean esMismoDia(LocalDateTime fecha1, LocalDateTime fecha2) {
+        return fecha1.getYear() == fecha2.getYear() &&
+                fecha1.getDayOfYear() == fecha2.getDayOfYear();
+    }
+
+    /**
+     * Inicia una ejecución del algoritmo genético considerando solo pedidos del día actual
+     */
+    public String iniciarAlgoritmoGeneticoDiario(AlgoritmoSimpleRequest request) {
+        List<Camion> camiones = dataRepository.obtenerCamiones();
+        Mapa mapa = dataRepository.obtenerMapa();
+
+        // Usar SP para traer pedidos y bloqueos
+        int tipo = "diario".equalsIgnoreCase(request.getTipoSimulador()) ? 1 : 2;
+        List<Object[]> pedidosSP = pedidoRepository.traerPedidos(tipo, request.getFecha());
+        List<Object[]> bloqueosSP = pedidoRepository.traerBloqueos(tipo, request.getFecha());
+        log.info("Pedidos traídos por SP: {}", pedidosSP.size());
+        log.info("Bloqueos traídos por SP: {}", bloqueosSP.size());
+
+        // Mapear los Object[] a la entidad Pedido
+        List<Pedido> pedidos = pedidosSP.stream()
+            .map(this::mapearPedidoDesdeSP)
+            .collect(Collectors.toList());
+
+        // Mapear los Object[] a la entidad Bloqueo
+        List<Bloqueo> bloqueos = bloqueosSP.stream()
+            .map(this::mapearBloqueoDesdeSP)
+            .collect(Collectors.toList());
+
+        if (pedidos.isEmpty()) {
+            throw new IllegalStateException("No hay pedidos para el día de hoy");
+        }
+
+        LocalDateTime hoy = LocalDateTime.now();
+
+        return iniciarEjecucionAlgoritmo(
+                camiones,
+                pedidos,
+                bloqueos,
+                mapa,
+                hoy,
+                EscenarioSimulacion.DIA_A_DIA,
+                request.getTamañoPoblacion(),
+                request.getNumGeneraciones(),
+                request.getTasaMutacion(),
+                request.getTasaCruce(),
+                request.getElitismo()
+        );
+    }
+
 }

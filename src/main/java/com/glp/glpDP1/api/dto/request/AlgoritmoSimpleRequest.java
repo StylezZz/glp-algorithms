@@ -5,7 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * DTO simplificado para solicitar la ejecución del algoritmo
@@ -33,4 +35,25 @@ public class AlgoritmoSimpleRequest {
     private Double tasaMutacion;
     private Double tasaCruce;
     private Integer elitismo;
+
+    private String tipoSimulador; // "diario" o "semanal"
+    
+   
+    @JsonFormat(pattern = "dd/MM/yyyy")
+    private LocalDate fecha; // ahora es LocalDate
+    
+    public String getTipoSimulador() {
+        return tipoSimulador;
+    }
+    public void setTipoSimulador(String tipoSimulador) {
+        this.tipoSimulador = tipoSimulador;
+    }
+
+    public LocalDate getFecha() {
+        return fecha;
+    }
+    public void setFecha(LocalDate fecha) {
+        this.fecha = fecha;
+    }
+    
 }
