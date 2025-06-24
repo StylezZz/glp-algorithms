@@ -162,4 +162,19 @@ public class Pedido {
                 ", entregado=" + entregado +
                 '}';
     }
+
+    private Pedido mapearPedidoDesdeSP(Object[] row) {
+        String idPedido = (String) row[0];
+        String idCliente = (String) row[1];
+        double latitud = (Double) row[2];
+        double longitud = (Double) row[3];
+        double cantidadGLP = (Double) row[4];
+        LocalDateTime horaRecepcion = ((java.sql.Timestamp) row[5]).toLocalDateTime();
+        int horasLimiteEntrega = ((Number) row[6]).intValue();
+
+        // Suponiendo que tienes un constructor Ubicacion(lat, lon)
+        Ubicacion ubicacion = new Ubicacion(latitud, longitud);
+
+        return new Pedido(idPedido, idCliente, ubicacion, cantidadGLP, horaRecepcion, horasLimiteEntrega);
+    }
 }

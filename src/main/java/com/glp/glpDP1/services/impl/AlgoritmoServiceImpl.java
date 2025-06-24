@@ -463,6 +463,34 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
                 fecha1.getDayOfYear() == fecha2.getDayOfYear();
     }
 
+
+     private Pedido mapearPedidoDesdeSP(Object[] row) {
+        // Implementación aquí (ajusta los índices y tipos según tu SP)
+        String idPedido = (String) row[0];
+        String idCliente = (String) row[1];
+        double latitud = (Double) row[2];
+        double longitud = (Double) row[3];
+        double cantidadGLP = (Double) row[4];
+        LocalDateTime horaRecepcion = ((java.sql.Timestamp) row[5]).toLocalDateTime();
+        int horasLimiteEntrega = ((Number) row[6]).intValue();
+
+        Ubicacion ubicacion = new Ubicacion(latitud, longitud);
+
+        return new Pedido(idPedido, idCliente, ubicacion, cantidadGLP, horaRecepcion, horasLimiteEntrega);
+    }
+
+    private Bloqueo mapearBloqueoDesdeSP(Object[] row) {
+        LocalDateTime horaInicio = ((java.sql.Timestamp) row[0]).toLocalDateTime();
+        LocalDateTime horaFin = ((java.sql.Timestamp) row[1]).toLocalDateTime();
+        double latitud = (Double) row[2];
+        double longitud = (Double) row[3];
+
+        List<Ubicacion> nodos = new ArrayList<>();
+        nodos.add(new Ubicacion(latitud, longitud));
+
+        return new Bloqueo(horaInicio, horaFin, nodos);
+    }
+    
     /**
      * Inicia una ejecución del algoritmo genético considerando solo pedidos del día actual
      */
@@ -508,4 +536,5 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         );
     }
 
+   
 }

@@ -56,4 +56,17 @@ public class Bloqueo {
         }
         return false;
     }
+
+    private Bloqueo mapearBloqueoDesdeSP(Object[] row) {
+        LocalDateTime horaInicio = ((java.sql.Timestamp) row[0]).toLocalDateTime();
+        LocalDateTime horaFin = ((java.sql.Timestamp) row[1]).toLocalDateTime();
+        double latitud = (Double) row[2];
+        double longitud = (Double) row[3];
+
+        // Crea la lista de nodos bloqueados con un solo nodo por fila
+        List<Ubicacion> nodos = new ArrayList<>();
+        nodos.add(new Ubicacion(latitud, longitud));
+
+        return new Bloqueo(horaInicio, horaFin, nodos);
+    }
 }
