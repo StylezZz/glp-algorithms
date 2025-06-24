@@ -36,16 +36,16 @@ public class AlgoritmoSimpleRequest {
     private Double tasaCruce;
     private Integer elitismo;
 
-    private String tipoSimulador; // "diario" o "semanal"
+    private int tipoSimulador; // "diario = 1" o "semanal = 2"
     
    
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate fecha; // ahora es LocalDate
     
-    public String getTipoSimulador() {
+    public int getTipoSimulador() {
         return tipoSimulador;
     }
-    public void setTipoSimulador(String tipoSimulador) {
+    public void setTipoSimulador(int tipoSimulador) {
         this.tipoSimulador = tipoSimulador;
     }
 

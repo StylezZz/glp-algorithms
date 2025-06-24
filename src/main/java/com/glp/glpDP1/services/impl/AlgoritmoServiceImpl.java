@@ -408,7 +408,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
      */
     public String iniciarAlgoritmoSemanal(AlgoritmoSimpleRequest request) {
 
-        if (request.getTipoSimulador() == null || request.getTipoSimulador().isEmpty() || request.getFecha() == null) {
+        if (request.getFecha() == null || request.getTipoSimulador() == 0) {
         throw new IllegalArgumentException("Tipo de simulador y fecha son obligatorios");
         }
 
