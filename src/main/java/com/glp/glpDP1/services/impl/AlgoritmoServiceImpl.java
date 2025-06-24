@@ -63,6 +63,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         return iniciarEjecucionAlgoritmo(
                 request.getCamiones(),
                 request.getPedidos(),
+                request.getBloqueos(),
                 request.getMapa(),
                 request.getMomentoActual(),
                 request.getEscenario(),
@@ -416,7 +417,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         Mapa mapa = dataRepository.obtenerMapa();
 
         // Usar SP para traer pedidos y bloqueos
-        int tipo = "diario".equalsIgnoreCase(request.getTipoSimulador()) ? 1 : 2;
+        int tipo = request.getTipoSimulador();
         List<Object[]> pedidosSP = pedidoRepository.traerPedidos(tipo, request.getFecha());
         List<Object[]> bloqueosSP = pedidoRepository.traerBloqueos(tipo, request.getFecha());
         log.info("Pedidos traídos por SP: {}", pedidosSP.size());

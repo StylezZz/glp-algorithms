@@ -8,7 +8,6 @@ import com.glp.glpDP1.domain.Mapa;
 import com.glp.glpDP1.domain.Pedido;
 import com.glp.glpDP1.domain.Ruta;
 import com.glp.glpDP1.domain.SimuladorEntregas;
-import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.AlgoritmoService;
 import com.glp.glpDP1.services.impl.AlgoritmoServiceImpl;
