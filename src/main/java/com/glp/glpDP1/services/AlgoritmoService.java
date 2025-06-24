@@ -14,14 +14,14 @@ public interface AlgoritmoService {
      * @param request Parámetros para iniciar el algoritmo
      * @return Identificador único de la ejecución
      */
-    String iniciarAlgoritmo(AlgoritmoRequest request);
+//    String iniciarAlgoritmo(AlgoritmoRequest request);
 
     /**
      * Inicia la ejecución de un algoritmo de optimización usando datos ya cargados
      * @param request Parámetros simplificados para iniciar el algoritmo
      * @return Identificador único de la ejecución
      */
-    String iniciarAlgoritmo(AlgoritmoSimpleRequest request);
+//    String iniciarAlgoritmo(AlgoritmoSimpleRequest request);
 
     /**
      * Consulta el estado actual de la ejecución de un algoritmo

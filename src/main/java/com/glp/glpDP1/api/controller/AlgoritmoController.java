@@ -41,30 +41,6 @@ public class AlgoritmoController {
 
 
     /**
-     * Inicia una nueva ejecución del algoritmo de optimización
-     * usando los datos ya cargados en el sistema
-     *
-     * @param request Parámetros de ejecución
-     * @return ID de la ejecución
-     */
-    @PostMapping("/start")
-    public ResponseEntity<String> iniciarAlgoritmo(@RequestBody AlgoritmoSimpleRequest request) {
-        try {
-            log.info("Iniciando algoritmo");
-
-            // Iniciar algoritmo con datos ya cargados
-            String id = algoritmoService.iniciarAlgoritmo(request);
-            return ResponseEntity.ok(id);
-        } catch (IllegalArgumentException e) {
-            log.error("Error al iniciar algoritmo: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Error inesperado al iniciar algoritmo: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar el algoritmo", e);
-        }
-    }
-
-    /**
      * Consulta el estado actual de la ejecución de un algoritmo
      *
      * @param id ID de la ejecución
@@ -124,26 +100,6 @@ public class AlgoritmoController {
         }
     }
 
-    // En AlgoritmoController.java - Parámetros optimizados
-    @PostMapping("/start-optimized")
-    public ResponseEntity<String> iniciarAlgoritmoOptimizado(@RequestBody AlgoritmoSimpleRequest request) {
-        try {
-            // Establecer parámetros optimizados
-            request.setTamañoPoblacion(250); // Aumentado de 100
-            request.setNumGeneraciones(150); // Aumentado de 50
-            request.setTasaMutacion(0.15); // Ajustado de 0.05
-            request.setTasaCruce(0.85); // Ajustado de 0.7
-            request.setElitismo(15); // Aumentado de 5
-
-            // Iniciar algoritmo con parámetros optimizados
-            String id = algoritmoService.iniciarAlgoritmo(request);
-            return ResponseEntity.ok(id);
-        } catch (Exception e) {
-            log.error("Error al iniciar algoritmo optimizado: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
-        }
-    }
-
     @Autowired
     private AnalisisPedidosService analisisPedidosService;
 
@@ -178,21 +134,6 @@ public class AlgoritmoController {
             log.error("Error al generar informe: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al generar informe", e);
-        }
-    }
-
-    @PostMapping("/start-diario")
-    public ResponseEntity<String> iniciarAlgoritmoDiario(@RequestBody AlgoritmoSimpleRequest request) {
-        try {
-            log.info("Iniciando algoritmo diario tipo");
-            String id = ((AlgoritmoServiceImpl) algoritmoService).iniciarAlgoritmoDiario(request);
-            return ResponseEntity.ok(id);
-        } catch (IllegalStateException e) {
-            log.warn("No hay pedidos para hoy: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.NO_CONTENT, e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Error al iniciar algoritmo diario: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al iniciar algoritmo", e);
         }
     }
 

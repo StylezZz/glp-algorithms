@@ -11,10 +11,10 @@ import java.util.List;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<PedidoEntity, Long> {
-    @Query(value = "CALL traerPedidos(:tipoSimulacion, :fecha)", nativeQuery = true)
+    @Query(value = "SELECT * FROM traerpedidos(:tipoSimulacion, CAST(:fecha AS date))", nativeQuery = true)
     List<Object[]> traerPedidos(@Param("tipoSimulacion") Integer tipoSimulacion, @Param("fecha") LocalDate fecha);
 
-    @Query(value = "CALL traerBloqueos(:tipoSimulacion, :fecha)", nativeQuery = true)
+    @Query(value = "SELECT * FROM traerbloqueos(:tipoSimulacion, CAST(:fecha AS date))", nativeQuery = true)
     List<Object[]> traerBloqueos(@Param("tipoSimulacion") Integer tipoSimulacion, @Param("fecha") LocalDate fecha);
 
     List<PedidoEntity> findByIdCliente(String idCliente);
