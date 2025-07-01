@@ -1,6 +1,5 @@
 package com.glp.glpDP1.api.controller;
 
-import com.glp.glpDP1.api.dto.request.BloqueoRequest;
 import com.glp.glpDP1.domain.Bloqueo;
 import com.glp.glpDP1.domain.Mapa;
 import com.glp.glpDP1.domain.Ubicacion;
@@ -52,31 +51,6 @@ public class MapaController {
     }
 
     /**
-     * Agrega un nuevo bloqueo al mapa
-     */
-    @PostMapping("/bloqueos")
-    public ResponseEntity<Bloqueo> agregarBloqueo(@RequestBody BloqueoRequest request) {
-        try {
-            log.info("Agregando nuevo bloqueo: {} - {}", request.getHoraInicio(), request.getHoraFin());
-
-            if (request.getNodos() == null || request.getNodos().isEmpty()) {
-                throw new IllegalArgumentException("Debe proporcionar al menos un nodo para el bloqueo");
-            }
-
-            Bloqueo bloqueo = new Bloqueo(request.getHoraInicio(), request.getHoraFin(), request.getNodos());
-            mapaService.agregarBloqueo(bloqueo);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(bloqueo);
-        } catch (IllegalArgumentException e) {
-            log.error("Error en los datos del bloqueo: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Error al agregar bloqueo: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al agregar el bloqueo", e);
-        }
-    }
-
-    /**
      * Verifica si una ubicación está bloqueada en un momento dado
      */
     @GetMapping("/bloqueos/verificar")
@@ -100,5 +74,3 @@ public class MapaController {
         }
     }
 }
-
-// Usamos BloqueoRequest de com.glp.glpDP1.api.dto.request

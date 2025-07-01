@@ -12,7 +12,6 @@ import com.glp.glpDP1.domain.enums.EscenarioSimulacion;
 import com.glp.glpDP1.repository.impl.DataRepositoryImpl;
 import com.glp.glpDP1.services.AlgoritmoService;
 import com.glp.glpDP1.services.impl.AlgoritmoServiceImpl;
-import com.glp.glpDP1.services.impl.AnalisisPedidosService;
 import com.glp.glpDP1.services.impl.AveriaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -145,42 +144,6 @@ public class AlgoritmoController {
         }
     }
 
-    @Autowired
-    private AnalisisPedidosService analisisPedidosService;
-
-    @GetMapping("/analisis/{id}")
-    public ResponseEntity<Map<String, Object>> analizarResultado(@PathVariable String id) {
-        try {
-            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
-            List<Pedido> todosPedidos = dataRepositoryImpl.obtenerPedidos();
-
-            Map<String, Object> analisis = analisisPedidosService.analizarPedidosNoAsignados(
-                    todosPedidos, resultado.getRutas());
-
-            return ResponseEntity.ok(analisis);
-        } catch (Exception e) {
-            log.error("Error al analizar resultado: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al analizar resultado", e);
-        }
-    }
-
-    @GetMapping("/analisis/{id}/informe")
-    public ResponseEntity<String> obtenerInformeAnalisis(@PathVariable String id) {
-        try {
-            AlgoritmoResultResponse resultado = algoritmoService.obtenerResultados(id);
-            List<Pedido> todosPedidos = dataRepositoryImpl.obtenerPedidos();
-
-            String informe = analisisPedidosService.generarInformeNoAsignados(
-                    todosPedidos, resultado.getRutas());
-
-            return ResponseEntity.ok(informe);
-        } catch (Exception e) {
-            log.error("Error al generar informe: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al generar informe", e);
-        }
-    }
 
     @PostMapping("/start-diario")
     public ResponseEntity<String> iniciarAlgoritmoDiario(@RequestBody AlgoritmoSimpleRequest request) {

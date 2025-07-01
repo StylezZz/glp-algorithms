@@ -1,7 +1,6 @@
 package com.glp.glpDP1.services.impl;
 
 import com.glp.glpDP1.algorithm.AlgoritmoGenetico;
-import com.glp.glpDP1.api.dto.request.AlgoritmoRequest;
 import com.glp.glpDP1.api.dto.request.AlgoritmoSimpleRequest;
 import com.glp.glpDP1.api.dto.response.AlgoritmoResultResponse;
 import com.glp.glpDP1.api.dto.response.AlgoritmoStatusResponse;
@@ -37,38 +36,6 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
 
     // Executor para ejecutar los algoritmos de forma asíncrona
     private final ExecutorService executor = Executors.newFixedThreadPool(5);
-
-    @Override
-    public String iniciarAlgoritmo(AlgoritmoRequest request) {
-        // Este método se mantiene para compatibilidad con código existente
-
-        // Validar petición
-        if (request.getCamiones() == null || request.getCamiones().isEmpty()) {
-            throw new IllegalArgumentException("No se proporcionaron camiones");
-        }
-        if (request.getPedidos() == null || request.getPedidos().isEmpty()) {
-            throw new IllegalArgumentException("No se proporcionaron pedidos");
-        }
-        if (request.getMapa() == null) {
-            throw new IllegalArgumentException("No se proporcionó el mapa");
-        }
-        if (request.getMomentoActual() == null) {
-            throw new IllegalArgumentException("No se proporcionó el momento actual");
-        }
-
-        return iniciarEjecucionAlgoritmo(
-                request.getCamiones(),
-                request.getPedidos(),
-                request.getMapa(),
-                request.getMomentoActual(),
-                request.getEscenario(),
-                request.getTamañoPoblacion(),
-                request.getNumGeneraciones(),
-                request.getTasaMutacion(),
-                request.getTasaCruce(),
-                request.getElitismo()
-        );
-    }
 
     @Override
     public String iniciarAlgoritmo(AlgoritmoSimpleRequest request) {

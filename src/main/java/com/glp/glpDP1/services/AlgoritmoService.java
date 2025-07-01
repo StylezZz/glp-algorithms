@@ -1,6 +1,5 @@
 package com.glp.glpDP1.services;
 
-import com.glp.glpDP1.api.dto.request.AlgoritmoRequest;
 import com.glp.glpDP1.api.dto.request.AlgoritmoSimpleRequest;
 import com.glp.glpDP1.api.dto.response.AlgoritmoResultResponse;
 import com.glp.glpDP1.api.dto.response.AlgoritmoStatusResponse;
@@ -8,13 +7,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public interface AlgoritmoService {
-
-    /**
-     * Inicia la ejecución de un algoritmo de optimización
-     * @param request Parámetros para iniciar el algoritmo
-     * @return Identificador único de la ejecución
-     */
-    String iniciarAlgoritmo(AlgoritmoRequest request);
 
     /**
      * Inicia la ejecución de un algoritmo de optimización usando datos ya cargados
