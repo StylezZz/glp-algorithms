@@ -60,8 +60,8 @@ public class Bloqueo {
     private Bloqueo mapearBloqueoDesdeSP(Object[] row) {
         LocalDateTime horaInicio = ((java.sql.Timestamp) row[0]).toLocalDateTime();
         LocalDateTime horaFin = ((java.sql.Timestamp) row[1]).toLocalDateTime();
-        double latitud = (Double) row[2];
-        double longitud = (Double) row[3];
+        Integer latitud = ((Number) row[2]).intValue();
+        Integer longitud = ((Number) row[3]).intValue();
 
         // Crea la lista de nodos bloqueados con un solo nodo por fila
         List<Ubicacion> nodos = new ArrayList<>();

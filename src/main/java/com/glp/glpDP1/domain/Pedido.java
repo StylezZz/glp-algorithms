@@ -166,8 +166,8 @@ public class Pedido {
     private Pedido mapearPedidoDesdeSP(Object[] row) {
         String idPedido = (String) row[0];
         String idCliente = (String) row[1];
-        double latitud = (Double) row[2];
-        double longitud = (Double) row[3];
+        Integer latitud = ((Number) row[2]).intValue();
+        Integer longitud = ((Number) row[3]).intValue();
         double cantidadGLP = (Double) row[4];
         LocalDateTime horaRecepcion = ((java.sql.Timestamp) row[5]).toLocalDateTime();
         int horasLimiteEntrega = ((Number) row[6]).intValue();

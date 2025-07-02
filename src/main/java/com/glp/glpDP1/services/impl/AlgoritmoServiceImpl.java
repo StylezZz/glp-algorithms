@@ -42,89 +42,90 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
     //
     private final PedidoRepository pedidoRepository;
 
-    @Override
-    public String iniciarAlgoritmo(AlgoritmoRequest request) {
-        // Este método se mantiene para compatibilidad con código existente
-
-        // Validar petición
-        if (request.getCamiones() == null || request.getCamiones().isEmpty()) {
-            throw new IllegalArgumentException("No se proporcionaron camiones");
-        }
-        if (request.getPedidos() == null || request.getPedidos().isEmpty()) {
-            throw new IllegalArgumentException("No se proporcionaron pedidos");
-        }
-        if (request.getMapa() == null) {
-            throw new IllegalArgumentException("No se proporcionó el mapa");
-        }
-        if (request.getMomentoActual() == null) {
-            throw new IllegalArgumentException("No se proporcionó el momento actual");
-        }
-
-        return iniciarEjecucionAlgoritmo(
-                request.getCamiones(),
-                request.getPedidos(),
-                request.getBloqueos(),
-                request.getMapa(),
-                request.getMomentoActual(),
-                request.getEscenario(),
-                request.getTamañoPoblacion(),
-                request.getNumGeneraciones(),
-                request.getTasaMutacion(),
-                request.getTasaCruce(),
-                request.getElitismo()
-        );
-    }
-
-    @Override
-    public String iniciarAlgoritmo(AlgoritmoSimpleRequest request) {
-        // Obtener datos del repositorio
-        List<Camion> camiones = dataRepository.obtenerCamiones();
-        List<Pedido> pedidos = dataRepository.obtenerPedidos();
-        Mapa mapa = dataRepository.obtenerMapa();
-
-        // Validar datos
-        if (camiones.isEmpty()) {
-            throw new IllegalArgumentException("No hay camiones disponibles en el sistema");
-        }
-        if (pedidos.isEmpty()) {
-            throw new IllegalArgumentException("No hay pedidos pendientes en el sistema");
-        }
-        if (mapa == null) {
-            throw new IllegalArgumentException("No hay mapa configurado en el sistema");
-        }
-
-        // Si no se especificó momento actual, usar el actual
-        LocalDateTime momentoActual = request.getMomentoActual();
-        if (momentoActual == null) {
-            momentoActual = LocalDateTime.now();
-        }
-
-        // Convertir escenario
-        EscenarioSimulacion escenario = null;
-        if (request.getEscenario() != null) {
-            try {
-                escenario = EscenarioSimulacion.valueOf(request.getEscenario());
-            } catch (IllegalArgumentException e) {
-                log.warn("Escenario no válido: {}, usando DIA_A_DIA por defecto", request.getEscenario());
-            }
-        }
-        if (escenario == null) {
-            escenario = EscenarioSimulacion.DIA_A_DIA;
-        }
-
-        return iniciarEjecucionAlgoritmo(
-                camiones,
-                pedidos,
-                mapa,
-                momentoActual,
-                escenario,
-                request.getTamañoPoblacion(),
-                request.getNumGeneraciones(),
-                request.getTasaMutacion(),
-                request.getTasaCruce(),
-                request.getElitismo()
-        );
-    }
+//    @Override
+//    public String iniciarAlgoritmo(AlgoritmoRequest request) {
+//        // Este método se mantiene para compatibilidad con código existente
+//
+//        // Validar petición
+//        if (request.getCamiones() == null || request.getCamiones().isEmpty()) {
+//            throw new IllegalArgumentException("No se proporcionaron camiones");
+//        }
+//        if (request.getPedidos() == null || request.getPedidos().isEmpty()) {
+//            throw new IllegalArgumentException("No se proporcionaron pedidos");
+//        }
+//        if (request.getMapa() == null) {
+//            throw new IllegalArgumentException("No se proporcionó el mapa");
+//        }
+//        if (request.getMomentoActual() == null) {
+//            throw new IllegalArgumentException("No se proporcionó el momento actual");
+//        }
+//
+//        return iniciarEjecucionAlgoritmo(
+//                request.getCamiones(),
+//                request.getPedidos(),
+//                request.getBloqueos(),
+//                request.getMapa(),
+//                request.getMomentoActual(),
+//                request.getEscenario(),
+//                request.getTamañoPoblacion(),
+//                request.getNumGeneraciones(),
+//                request.getTasaMutacion(),
+//                request.getTasaCruce(),
+//                request.getElitismo()
+//        );
+//    }
+//
+//    @Override
+//    public String iniciarAlgoritmo(AlgoritmoSimpleRequest request) {
+//        // Obtener datos del repositorio
+//        List<Camion> camiones = dataRepository.obtenerCamiones();
+//        List<Pedido> pedidos = dataRepository.obtenerPedidos();
+//        Mapa mapa = dataRepository.obtenerMapa();
+//
+//        // Validar datos
+//        if (camiones.isEmpty()) {
+//            throw new IllegalArgumentException("No hay camiones disponibles en el sistema");
+//        }
+//        if (pedidos.isEmpty()) {
+//            throw new IllegalArgumentException("No hay pedidos pendientes en el sistema");
+//        }
+//        if (mapa == null) {
+//            throw new IllegalArgumentException("No hay mapa configurado en el sistema");
+//        }
+//
+//        // Si no se especificó momento actual, usar el actual
+//        LocalDateTime momentoActual = request.getMomentoActual();
+//        if (momentoActual == null) {
+//            momentoActual = LocalDateTime.now();
+//        }
+//
+//        // Convertir escenario
+//        EscenarioSimulacion escenario = null;
+//        if (request.getEscenario() != null) {
+//            try {
+//                escenario = EscenarioSimulacion.valueOf(request.getEscenario());
+//            } catch (IllegalArgumentException e) {
+//                log.warn("Escenario no válido: {}, usando DIA_A_DIA por defecto", request.getEscenario());
+//            }
+//        }
+//        if (escenario == null) {
+//            escenario = EscenarioSimulacion.DIA_A_DIA;
+//        }
+//
+//        return iniciarEjecucionAlgoritmo(
+//                camiones,
+//                pedidos,
+//                blo
+//                mapa,
+//                momentoActual,
+//                escenario,
+//                request.getTamañoPoblacion(),
+//                request.getNumGeneraciones(),
+//                request.getTasaMutacion(),
+//                request.getTasaCruce(),
+//                request.getElitismo()
+//        );
+//    }
 
     /**
      * Método interno para iniciar la ejecución del algoritmo
@@ -370,38 +371,38 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         return rutas.stream().mapToInt(ruta -> ruta.getPedidosAsignados().size()).sum();
     }
 
-    public String iniciarAlgoritmoDiario(AlgoritmoSimpleRequest request) {
-        List<Camion> camiones = dataRepository.obtenerCamiones();
-        Mapa mapa = dataRepository.obtenerMapa();
-
-        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
-
-        LocalDateTime hoy = LocalDateTime.now();
-        List<Pedido> pedidosHoy = todosPedidos.stream()
-                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), hoy))
-                .collect(Collectors.toList());
-
-        log.info("Planificando rutas para {} pedidos del día de hoy", pedidosHoy.size());
-
-        // Si no hay pedidos hoy, no iniciar algoritmo
-        if (pedidosHoy.isEmpty()) {
-            throw new IllegalStateException("No hay pedidos para el día de hoy");
-        }
-
-        // Usar la implementación actual pero con los pedidos filtrados
-        return iniciarEjecucionAlgoritmo(
-                camiones,
-                pedidosHoy,
-                mapa,
-                hoy,
-                EscenarioSimulacion.DIA_A_DIA,
-                request.getTamañoPoblacion(),
-                request.getNumGeneraciones(),
-                request.getTasaMutacion(),
-                request.getTasaCruce(),
-                request.getElitismo()
-        );
-    }
+//    public String iniciarAlgoritmoDiario(AlgoritmoSimpleRequest request) {
+//        List<Camion> camiones = dataRepository.obtenerCamiones();
+//        Mapa mapa = dataRepository.obtenerMapa();
+//
+//        List<Pedido> todosPedidos = dataRepository.obtenerPedidos();
+//
+//        LocalDateTime hoy = LocalDateTime.now();
+//        List<Pedido> pedidosHoy = todosPedidos.stream()
+//                .filter(pedido -> esMismoDia(pedido.getHoraRecepcion(), hoy))
+//                .collect(Collectors.toList());
+//
+//        log.info("Planificando rutas para {} pedidos del día de hoy", pedidosHoy.size());
+//
+//        // Si no hay pedidos hoy, no iniciar algoritmo
+//        if (pedidosHoy.isEmpty()) {
+//            throw new IllegalStateException("No hay pedidos para el día de hoy");
+//        }
+//
+//        // Usar la implementación actual pero con los pedidos filtrados
+//        return iniciarEjecucionAlgoritmo(
+//                camiones,
+//                pedidosHoy,
+//                mapa,
+//                hoy,
+//                EscenarioSimulacion.DIA_A_DIA,
+//                request.getTamañoPoblacion(),
+//                request.getNumGeneraciones(),
+//                request.getTasaMutacion(),
+//                request.getTasaCruce(),
+//                request.getElitismo()
+//        );
+//    }
 
 
     /**
@@ -469,8 +470,8 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         // Implementación aquí (ajusta los índices y tipos según tu SP)
         String idPedido = (String) row[0];
         String idCliente = (String) row[1];
-        double latitud = (Double) row[2];
-        double longitud = (Double) row[3];
+        Integer latitud = ((Number) row[2]).intValue();
+        Integer longitud = ((Number) row[3]).intValue();
         double cantidadGLP = (Double) row[4];
         LocalDateTime horaRecepcion = ((java.sql.Timestamp) row[5]).toLocalDateTime();
         int horasLimiteEntrega = ((Number) row[6]).intValue();
@@ -483,8 +484,8 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
     private Bloqueo mapearBloqueoDesdeSP(Object[] row) {
         LocalDateTime horaInicio = ((java.sql.Timestamp) row[0]).toLocalDateTime();
         LocalDateTime horaFin = ((java.sql.Timestamp) row[1]).toLocalDateTime();
-        double latitud = (Double) row[2];
-        double longitud = (Double) row[3];
+        Integer latitud = ((Number) row[2]).intValue();
+        Integer longitud = ((Number) row[3]).intValue();
 
         List<Ubicacion> nodos = new ArrayList<>();
         nodos.add(new Ubicacion(latitud, longitud));
@@ -500,7 +501,7 @@ public class AlgoritmoServiceImpl implements AlgoritmoService {
         Mapa mapa = dataRepository.obtenerMapa();
 
         // Usar SP para traer pedidos y bloqueos
-        int tipo = "diario".equalsIgnoreCase(request.getTipoSimulador()) ? 1 : 2;
+        int tipo = request.getTipoSimulador();
         List<Object[]> pedidosSP = pedidoRepository.traerPedidos(tipo, request.getFecha());
         List<Object[]> bloqueosSP = pedidoRepository.traerBloqueos(tipo, request.getFecha());
         log.info("Pedidos traídos por SP: {}", pedidosSP.size());
